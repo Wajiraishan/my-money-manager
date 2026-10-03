@@ -3,21 +3,20 @@
    Version: 2.0
    ========================================================= */
 
-"use strict";
+/* =====================================================
+   MY MONEY MANAGER
+   Complete CRUD + Automatic Balance Calculation
+===================================================== */
 
 
-/* =========================================================
-   STORAGE KEYS
-========================================================= */
+/* ================= STORAGE ================= */
 
 const TRANSACTION_KEY = "moneyTransactions";
 const FRIEND_KEY = "moneyFriends";
 const REMINDER_KEY = "moneyReminders";
 
 
-/* =========================================================
-   GLOBAL VARIABLES
-========================================================= */
+/* ================= GLOBAL DATA ================= */
 
 let transactions = [];
 let friends = [];
@@ -26,64 +25,54 @@ let reminders = [];
 let selectedTransactionType = "income";
 
 let editingTransactionId = null;
+let editingRepaymentId = null;
 let editingFriendId = null;
 let editingDebtId = null;
 let editingReminderId = null;
 
 let reminderFilter = "all";
-
 let balanceHidden = false;
 
 
-/* =========================================================
-   PAGE LOAD
-========================================================= */
+/* ================= START ================= */
 
 document.addEventListener("DOMContentLoaded", function () {
 
     loadData();
 
-    seedDemoData();
+    initializeStorage();
 
     setCurrentDate();
-
     setDefaultDates();
 
     setupNavigation();
-
     setupTransactionTypeButtons();
-
     setupExpenseFilters();
-
     setupReminderTabs();
+    setupTransactionHistoryFilter();
 
     updateEverything();
 
 });
 
 
-/* =========================================================
-   LOAD DATA
-========================================================= */
+/* ================= STORAGE ================= */
 
 function loadData() {
 
     try {
 
-        transactions =
-            JSON.parse(
-                localStorage.getItem(TRANSACTION_KEY)
-            ) || [];
+        transactions = JSON.parse(
+            localStorage.getItem(TRANSACTION_KEY)
+        ) || [];
 
-        friends =
-            JSON.parse(
-                localStorage.getItem(FRIEND_KEY)
-            ) || [];
+        friends = JSON.parse(
+            localStorage.getItem(FRIEND_KEY)
+        ) || [];
 
-        reminders =
-            JSON.parse(
-                localStorage.getItem(REMINDER_KEY)
-            ) || [];
+        reminders = JSON.parse(
+            localStorage.getItem(REMINDER_KEY)
+        ) || [];
 
     } catch (error) {
 
@@ -91,19 +80,27 @@ function loadData() {
         friends = [];
         reminders = [];
 
-        console.error(
-            "Data loading error:",
-            error
-        );
-
     }
 
 }
 
 
-/* =========================================================
-   SAVE DATA
-========================================================= */
+function initializeStorage() {
+
+    if (localStorage.getItem(TRANSACTION_KEY) === null) {
+        saveTransactions();
+    }
+
+    if (localStorage.getItem(FRIEND_KEY) === null) {
+        saveFriends();
+    }
+
+    if (localStorage.getItem(REMINDER_KEY) === null) {
+        saveReminders();
+    }
+
+}
+
 
 function saveTransactions() {
 
@@ -135,67 +132,30 @@ function saveReminders() {
 }
 
 
-/* =========================================================
-   UNIQUE ID
-========================================================= */
+/* ================= ID ================= */
 
-function generateId() {
+function generateId(prefix) {
 
-    return Date.now() +
-        Math.floor(
-            Math.random() * 100000
-        );
+    return prefix +
+        Date.now().toString(36) +
+        Math.random().toString(36).substring(2, 8);
 
 }
 
 
-/* =========================================================
-   DEMO DATA
-========================================================= */
+/* ================= DATE ================= */
 
-function seedDemoData() {
+function toLocalISODate(date) {
 
-    if (localStorage.getItem(TRANSACTION_KEY) === null) {
-        transactions = [];
-        saveTransactions();
-    }
+    const year = date.getFullYear();
 
-    if (localStorage.getItem(FRIEND_KEY) === null) {
-        friends = [];
-        saveFriends();
-    }
+    const month = String(
+        date.getMonth() + 1
+    ).padStart(2, "0");
 
-    if (localStorage.getItem(REMINDER_KEY) === null) {
-        reminders = [];
-        saveReminders();
-    }
-
-}
-
-
-/* =========================================================
-   DATE FUNCTIONS
-========================================================= */
-
-/*
-   Local date is used instead of toISOString()
-   to avoid Sri Lanka timezone date problems.
-*/
-
-function toLocalISODate(date = new Date()) {
-
-    const year =
-        date.getFullYear();
-
-    const month =
-        String(
-            date.getMonth() + 1
-        ).padStart(2, "0");
-
-    const day =
-        String(
-            date.getDate()
-        ).padStart(2, "0");
+    const day = String(
+        date.getDate()
+    ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
 
@@ -204,35 +164,7 @@ function toLocalISODate(date = new Date()) {
 
 function getToday() {
 
-    return toLocalISODate();
-
-}
-
-
-function getYesterday() {
-
-    const date =
-        new Date();
-
-    date.setDate(
-        date.getDate() - 1
-    );
-
-    return toLocalISODate(date);
-
-}
-
-
-function futureDate(days) {
-
-    const date =
-        new Date();
-
-    date.setDate(
-        date.getDate() + days
-    );
-
-    return toLocalISODate(date);
+    return toLocalISODate(new Date());
 
 }
 
@@ -240,13 +172,12 @@ function futureDate(days) {
 function formatDate(dateString) {
 
     if (!dateString) {
-        return "";
+        return "-";
     }
 
-    const date =
-        new Date(
-            dateString + "T00:00:00"
-        );
+    const date = new Date(
+        dateString + "T00:00:00"
+    );
 
     return date.toLocaleDateString(
         "en-US",
@@ -263,13 +194,12 @@ function formatDate(dateString) {
 function formatShortDate(dateString) {
 
     if (!dateString) {
-        return "";
+        return "-";
     }
 
-    const date =
-        new Date(
-            dateString + "T00:00:00"
-        );
+    const date = new Date(
+        dateString + "T00:00:00"
+    );
 
     return date.toLocaleDateString(
         "en-US",
@@ -284,69 +214,51 @@ function formatShortDate(dateString) {
 
 function setCurrentDate() {
 
-    const element =
-        document.getElementById(
-            "currentDate"
-        );
+    const element = document.getElementById(
+        "currentDate"
+    );
 
-    if (!element) {
-        return;
-    }
+    if (!element) return;
 
-    element.textContent =
-        new Date().toLocaleDateString(
-            "en-US",
-            {
-                month: "long",
-                day: "2-digit",
-                year: "numeric"
-            }
-        );
+    const today = new Date();
+
+    element.textContent = today.toLocaleDateString(
+        "en-US",
+        {
+            weekday: "short",
+            month: "short",
+            day: "numeric"
+        }
+    );
 
 }
 
 
 function setDefaultDates() {
 
-    const transactionDate =
-        document.getElementById(
-            "transactionDate"
-        );
+    const today = getToday();
 
-    const debtDate =
-        document.getElementById(
-            "debtDate"
-        );
+    const fields = [
+        "transactionDate",
+        "repaymentDate",
+        "debtDate",
+        "reminderDate"
+    ];
 
-    const reminderDate =
-        document.getElementById(
-            "reminderDate"
-        );
+    fields.forEach(function (id) {
 
+        const element = document.getElementById(id);
 
-    if (transactionDate) {
-        transactionDate.value =
-            getToday();
-    }
+        if (element) {
+            element.value = today;
+        }
 
-
-    if (debtDate) {
-        debtDate.value =
-            getToday();
-    }
-
-
-    if (reminderDate) {
-        reminderDate.value =
-            getToday();
-    }
+    });
 
 }
 
 
-/* =========================================================
-   MONEY FORMAT
-========================================================= */
+/* ================= MONEY ================= */
 
 function formatMoney(amount) {
 
@@ -362,159 +274,135 @@ function formatMoney(amount) {
 }
 
 
-/* =========================================================
-   FINANCIAL CALCULATIONS
-========================================================= */
+/* ================= CALCULATIONS ================= */
 
-function calculateFinancialData() {
+function getTotals() {
 
     let income = 0;
     let expenses = 0;
-
     let lent = 0;
     let borrowed = 0;
 
     let repaymentReceived = 0;
     let repaymentPaid = 0;
 
-
-    transactions.forEach(
-        function (transaction) {
-
-            const amount =
-                Number(
-                    transaction.amount
-                ) || 0;
+    let adjustmentIncrease = 0;
+    let adjustmentDecrease = 0;
 
 
-            switch (
-                transaction.type
-            ) {
+    transactions.forEach(function (transaction) {
 
-                case "income":
-
-                    income += amount;
-
-                    break;
+        const amount = Number(
+            transaction.amount || 0
+        );
 
 
-                case "expense":
+        switch (transaction.type) {
 
-                    expenses += amount;
+            case "income":
+                income += amount;
+                break;
 
-                    break;
+            case "expense":
+                expenses += amount;
+                break;
 
+            case "lent":
+                lent += amount;
+                break;
 
-                case "lent":
+            case "borrowed":
+                borrowed += amount;
+                break;
 
-                    lent += amount;
+            case "repayment_received":
+                repaymentReceived += amount;
+                break;
 
-                    break;
+            case "repayment_paid":
+                repaymentPaid += amount;
+                break;
 
+            case "adjustment":
 
-                case "borrowed":
+                if (
+                    transaction.adjustmentDirection ===
+                    "decrease"
+                ) {
+                    adjustmentDecrease += amount;
+                } else {
+                    adjustmentIncrease += amount;
+                }
 
-                    borrowed += amount;
-
-                    break;
-
-
-                case "repayment_received":
-
-                    repaymentReceived +=
-                        amount;
-
-                    break;
-
-
-                case "repayment_paid":
-
-                    repaymentPaid +=
-                        amount;
-
-                    break;
-
-            }
+                break;
 
         }
-    );
+
+    });
 
 
-    /*
-       Outstanding debt
-    */
+    const adjustmentNet =
+        adjustmentIncrease -
+        adjustmentDecrease;
+
+
+    const balance =
+        income +
+        borrowed +
+        repaymentReceived +
+        adjustmentNet -
+        expenses -
+        lent -
+        repaymentPaid;
+
 
     const outstandingLent =
         Math.max(
             0,
-            lent -
-            repaymentReceived
+            lent - repaymentReceived
         );
 
 
     const outstandingBorrowed =
         Math.max(
             0,
-            borrowed -
-            repaymentPaid
+            borrowed - repaymentPaid
         );
-
-
-    /*
-       REAL CASH BALANCE
-
-       Money coming in:
-       Income
-       + Borrowed
-       + Repayment received
-
-       Money going out:
-       Expenses
-       + Lent
-       + Repayment paid
-    */
-
-    const balance =
-        income +
-        borrowed +
-        repaymentReceived -
-        expenses -
-        lent -
-        repaymentPaid;
 
 
     return {
 
-        income: income,
+        income,
+        expenses,
+        lent,
+        borrowed,
 
-        expenses: expenses,
+        repaymentReceived,
+        repaymentPaid,
 
-        lent: outstandingLent,
+        adjustmentIncrease,
+        adjustmentDecrease,
+        adjustmentNet,
 
-        borrowed: outstandingBorrowed,
+        balance,
 
-        repaymentReceived:
-            repaymentReceived,
-
-        repaymentPaid:
-            repaymentPaid,
-
-        balance: balance
+        outstandingLent,
+        outstandingBorrowed
 
     };
 
 }
 
 
-/* =========================================================
-   UPDATE EVERYTHING
-========================================================= */
+/* ================= MAIN UPDATE ================= */
 
 function updateEverything() {
 
     updateDashboard();
 
-    renderTransactions();
+    renderRecentTransactions();
+
+    renderAllTransactions();
 
     renderExpenses();
 
@@ -533,137 +421,290 @@ function updateEverything() {
 }
 
 
-/* =========================================================
-   DASHBOARD
-========================================================= */
+/* ================= DASHBOARD ================= */
 
 function updateDashboard() {
 
-    const data =
-        calculateFinancialData();
+    const totals = getTotals();
 
 
-    const balance =
-        document.getElementById(
-            "balance"
-        );
+    setText(
+        "totalIncome",
+        formatMoney(totals.income)
+    );
 
 
-    if (balance) {
-
-        balance.textContent =
-            balanceHidden
-                ? "Rs. •••••••"
-                : formatMoney(
-                    data.balance
-                );
-
-    }
+    setText(
+        "totalExpenses",
+        formatMoney(totals.expenses)
+    );
 
 
-    const income =
-        document.getElementById(
-            "totalIncome"
-        );
+    setText(
+        "totalLent",
+        formatMoney(totals.outstandingLent)
+    );
 
 
-    const expenses =
-        document.getElementById(
-            "totalExpenses"
-        );
+    setText(
+        "totalBorrowed",
+        formatMoney(totals.outstandingBorrowed)
+    );
 
 
-    const lent =
-        document.getElementById(
-            "totalLent"
-        );
-
-
-    const borrowed =
-        document.getElementById(
-            "totalBorrowed"
-        );
-
-
-    if (income) {
-        income.textContent =
-            formatMoney(data.income);
-    }
-
-
-    if (expenses) {
-        expenses.textContent =
-            formatMoney(data.expenses);
-    }
-
-
-    if (lent) {
-        lent.textContent =
-            formatMoney(data.lent);
-    }
-
-
-    if (borrowed) {
-        borrowed.textContent =
-            formatMoney(data.borrowed);
-    }
+    updateBalanceDisplay();
 
 }
 
 
-/* =========================================================
-   BALANCE VISIBILITY
-========================================================= */
+function updateBalanceDisplay() {
+
+    const element = document.getElementById(
+        "balance"
+    );
+
+    const icon = document.getElementById(
+        "balanceEyeIcon"
+    );
+
+    if (!element) return;
+
+
+    if (balanceHidden) {
+
+        element.textContent = "••••••••";
+
+        if (icon) {
+            icon.className =
+                "fa-solid fa-eye-slash";
+        }
+
+    } else {
+
+        element.textContent =
+            formatMoney(
+                getTotals().balance
+            );
+
+        if (icon) {
+            icon.className =
+                "fa-solid fa-eye";
+        }
+
+    }
+
+}
+
 
 function toggleBalance() {
 
-    balanceHidden =
-        !balanceHidden;
+    balanceHidden = !balanceHidden;
+
+    updateBalanceDisplay();
+
+}
 
 
-    const balance =
+/* ================= NAVIGATION ================= */
+
+function setupNavigation() {
+
+    document
+        .querySelectorAll(
+            ".menu-item, .mobile-nav-item"
+        )
+        .forEach(function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    const page =
+                        button.dataset.page;
+
+                    goToPage(page);
+
+                }
+            );
+
+        });
+
+}
+
+
+function goToPage(pageName) {
+
+    const page = document.getElementById(
+        "page-" + pageName
+    );
+
+    if (!page) return;
+
+
+    document
+        .querySelectorAll(".page")
+        .forEach(function (item) {
+
+            item.classList.remove(
+                "active-page"
+            );
+
+        });
+
+
+    page.classList.add(
+        "active-page"
+    );
+
+
+    document
+        .querySelectorAll(
+            ".menu-item, .mobile-nav-item"
+        )
+        .forEach(function (item) {
+
+            item.classList.toggle(
+                "active",
+                item.dataset.page === pageName
+            );
+
+        });
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+/* ================= TRANSACTION TYPES ================= */
+
+function setupTransactionTypeButtons() {
+
+    document
+        .querySelectorAll(".type-btn")
+        .forEach(function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    selectTransactionType(
+                        button.dataset.type
+                    );
+
+                }
+            );
+
+        });
+
+}
+
+
+function selectTransactionType(type) {
+
+    selectedTransactionType = type;
+
+
+    document
+        .querySelectorAll(".type-btn")
+        .forEach(function (button) {
+
+            button.classList.toggle(
+                "active",
+                button.dataset.type === type
+            );
+
+        });
+
+
+    const personGroup =
         document.getElementById(
-            "balance"
+            "transactionPersonGroup"
+        );
+
+    const categoryGroup =
+        document.getElementById(
+            "transactionCategoryGroup"
+        );
+
+    const adjustmentGroup =
+        document.getElementById(
+            "transactionAdjustmentGroup"
         );
 
 
-    const icon =
+    const needsPerson =
+        type === "lent" ||
+        type === "borrowed";
+
+
+    const needsCategory =
+        type === "income" ||
+        type === "expense";
+
+
+    const needsAdjustment =
+        type === "adjustment";
+
+
+    personGroup.classList.toggle(
+        "hidden",
+        !needsPerson
+    );
+
+
+    categoryGroup.classList.toggle(
+        "hidden",
+        !needsCategory
+    );
+
+
+    adjustmentGroup.classList.toggle(
+        "hidden",
+        !needsAdjustment
+    );
+
+
+    const description =
         document.getElementById(
-            "eyeIcon"
+            "transactionDescription"
         );
 
 
-    const data =
-        calculateFinancialData();
+    if (type === "income") {
 
+        description.placeholder =
+            "e.g. Monthly salary";
 
-    if (balance) {
+    } else if (type === "expense") {
 
-        balance.textContent =
-            balanceHidden
-                ? "Rs. •••••••"
-                : formatMoney(
-                    data.balance
-                );
+        description.placeholder =
+            "e.g. Lunch at restaurant";
 
-    }
+    } else if (type === "lent") {
 
+        description.placeholder =
+            "e.g. Money given to friend";
 
-    if (icon) {
+    } else if (type === "borrowed") {
 
-        icon.className =
-            balanceHidden
-                ? "fa-solid fa-eye-slash"
-                : "fa-solid fa-eye";
+        description.placeholder =
+            "e.g. Money borrowed";
+
+    } else if (type === "adjustment") {
+
+        description.placeholder =
+            "e.g. Cash balance correction";
 
     }
 
 }
 
 
-/* =========================================================
-   TRANSACTION MODAL
-========================================================= */
+/* ================= TRANSACTION MODAL ================= */
 
 function openTransactionModal(
     type = "income",
@@ -676,288 +717,197 @@ function openTransactionModal(
         );
 
 
-    if (!modal) {
-        return;
-    }
-
-
     if (!keepEditing) {
 
-        editingTransactionId =
-            null;
+        editingTransactionId = null;
+
+        resetTransactionForm();
 
     }
 
 
-    const form =
-        document.getElementById(
-            "transactionForm"
-        );
+    if (keepEditing &&
+        editingTransactionId) {
 
+        const transaction =
+            transactions.find(
+                function (item) {
 
-    if (!keepEditing && form) {
+                    return item.id ===
+                        editingTransactionId;
 
-        form.reset();
-
-    }
-
-
-    if (!keepEditing) {
-
-        const date =
-            document.getElementById(
-                "transactionDate"
+                }
             );
 
-        if (date) {
-            date.value =
-                getToday();
-        }
+
+        if (!transaction) return;
+
+
+        document.getElementById(
+            "transactionAmount"
+        ).value = transaction.amount;
+
+
+        document.getElementById(
+            "transactionDescription"
+        ).value =
+            transaction.description || "";
+
+
+        document.getElementById(
+            "transactionDate"
+        ).value =
+            transaction.date || getToday();
+
+
+        document.getElementById(
+            "transactionCategory"
+        ).value =
+            transaction.category || "other";
+
+
+        document.getElementById(
+            "transactionPerson"
+        ).value =
+            transaction.person || "";
+
+
+        document.getElementById(
+            "adjustmentDirection"
+        ).value =
+            transaction.adjustmentDirection ||
+            "increase";
 
     }
 
 
-    selectedTransactionType =
-        type || "income";
+    selectedTransactionType = type;
+
+    selectTransactionType(type);
 
 
-    updateTransactionTypeButtons();
+    const editing =
+        Boolean(editingTransactionId);
 
 
-    const title =
-        modal.querySelector(
-            ".modal-header h2"
-        );
-
-
-    const subtitle =
-        modal.querySelector(
-            ".modal-header p"
-        );
-
-
-    const saveButton =
-        modal.querySelector(
-            ".save-btn"
-        );
-
-
-    if (editingTransactionId) {
-
-        if (title) {
-            title.textContent =
-                "Edit Transaction";
-        }
-
-        if (subtitle) {
-            subtitle.textContent =
-                "Update your money activity";
-        }
-
-        if (saveButton) {
-            saveButton.innerHTML =
-                '<i class="fa-solid fa-check"></i> Update Transaction';
-        }
-
-    } else {
-
-        if (title) {
-            title.textContent =
-                "Add Transaction";
-        }
-
-        if (subtitle) {
-            subtitle.textContent =
-                "Record your money activity";
-        }
-
-        if (saveButton) {
-            saveButton.innerHTML =
-                '<i class="fa-solid fa-check"></i> Save Transaction';
-        }
-
-    }
-
-
-    modal.classList.add(
-        "show"
-    );
-
-    document.body.classList.add(
-        "modal-open"
+    setText(
+        "transactionModalTitle",
+        editing
+            ? "Edit Transaction"
+            : "Add Transaction"
     );
 
 
-    setTimeout(
-        function () {
-
-            const amount =
-                document.getElementById(
-                    "transactionAmount"
-                );
-
-            if (amount) {
-                amount.focus();
-            }
-
-        },
-        100
+    setText(
+        "transactionModalSubtitle",
+        editing
+            ? "Update the transaction details."
+            : "Record a new money transaction."
     );
+
+
+    setText(
+        "transactionSubmitText",
+        editing
+            ? "Update Transaction"
+            : "Save Transaction"
+    );
+
+
+    modal.classList.add("show");
 
 }
 
 
 function closeTransactionModal() {
 
-    const modal =
+    document
+        .getElementById("transactionModal")
+        .classList.remove("show");
+
+    editingTransactionId = null;
+
+    resetTransactionForm();
+
+}
+
+
+function resetTransactionForm() {
+
+    const form =
         document.getElementById(
-            "transactionModal"
+            "transactionForm"
         );
 
-
-    if (modal) {
-
-        modal.classList.remove(
-            "show"
-        );
-
+    if (form) {
+        form.reset();
     }
 
 
-    document.body.classList.remove(
-        "modal-open"
-    );
+    selectedTransactionType = "income";
+
+    selectTransactionType("income");
 
 
-    editingTransactionId =
-        null;
-
-}
-
-
-/* =========================================================
-   TRANSACTION TYPE BUTTONS
-========================================================= */
-
-function setupTransactionTypeButtons() {
-
-    const buttons =
-        document.querySelectorAll(
-            ".type-btn"
-        );
+    document.getElementById(
+        "transactionDate"
+    ).value = getToday();
 
 
-    buttons.forEach(
-        function (button) {
-
-            button.addEventListener(
-                "click",
-                function () {
-
-                    const type =
-                        this.dataset.type;
+    document.getElementById(
+        "transactionCategory"
+    ).value = "other";
 
 
-                    if (!type) {
-                        return;
-                    }
-
-
-                    selectedTransactionType =
-                        type;
-
-
-                    updateTransactionTypeButtons();
-
-                }
-            );
-
-        }
-    );
+    document.getElementById(
+        "adjustmentDirection"
+    ).value = "increase";
 
 }
 
 
-function updateTransactionTypeButtons() {
-
-    const buttons =
-        document.querySelectorAll(
-            ".type-btn"
-        );
-
-
-    buttons.forEach(
-        function (button) {
-
-            button.classList.toggle(
-                "active",
-                button.dataset.type ===
-                selectedTransactionType
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   SAVE TRANSACTION
-========================================================= */
+/* ================= SAVE TRANSACTION ================= */
 
 function saveTransaction(event) {
 
     event.preventDefault();
 
 
-    const amountInput =
+    const amount = Number(
         document.getElementById(
             "transactionAmount"
-        );
-
-
-    const descriptionInput =
-        document.getElementById(
-            "transactionDescription"
-        );
-
-
-    const dateInput =
-        document.getElementById(
-            "transactionDate"
-        );
-
-
-    const categoryInput =
-        document.getElementById(
-            "transactionCategory"
-        );
-
-
-    const amount =
-        Number(
-            amountInput
-                ? amountInput.value
-                : 0
-        );
+        ).value
+    );
 
 
     const description =
-        descriptionInput
-            ? descriptionInput.value.trim()
-            : "";
+        document.getElementById(
+            "transactionDescription"
+        ).value.trim();
 
 
     const date =
-        dateInput
-            ? dateInput.value
-            : "";
+        document.getElementById(
+            "transactionDate"
+        ).value;
 
 
     const category =
-        categoryInput
-            ? categoryInput.value
-            : "other";
+        document.getElementById(
+            "transactionCategory"
+        ).value;
+
+
+    const person =
+        document.getElementById(
+            "transactionPerson"
+        ).value.trim();
+
+
+    const adjustmentDirection =
+        document.getElementById(
+            "adjustmentDirection"
+        ).value;
 
 
     if (!amount || amount <= 0) {
@@ -984,10 +934,16 @@ function saveTransaction(event) {
     }
 
 
-    if (!date) {
+    if (
+        (
+            selectedTransactionType === "lent" ||
+            selectedTransactionType === "borrowed"
+        ) &&
+        !person
+    ) {
 
         showMessage(
-            "Please select a date.",
+            "Please enter the person's name.",
             "error"
         );
 
@@ -996,2023 +952,365 @@ function saveTransaction(event) {
     }
 
 
-    /*
-       Person is needed for Lent / Borrowed.
-       Current HTML doesn't have a person field,
-       so we ask only when needed.
-    */
+    const data = {
 
-    let person = "";
+        type: selectedTransactionType,
 
+        amount: amount,
 
-    if (
-        selectedTransactionType ===
-            "lent" ||
-        selectedTransactionType ===
-            "borrowed"
-    ) {
+        description: description,
 
-        const existing =
-            editingTransactionId
-                ? transactions.find(
-                    t =>
-                        t.id ===
-                        editingTransactionId
-                )
-                : null;
+        date: date || getToday(),
 
+        category:
+            selectedTransactionType === "income" ||
+            selectedTransactionType === "expense"
+                ? category
+                : "other",
 
-        if (existing) {
+        person:
+            selectedTransactionType === "lent" ||
+            selectedTransactionType === "borrowed"
+                ? person
+                : "",
 
-            person =
-                existing.person || "";
+        adjustmentDirection:
+            selectedTransactionType === "adjustment"
+                ? adjustmentDirection
+                : "",
 
-        }
+        updatedAt: new Date().toISOString()
 
+    };
 
-        if (!person) {
-
-            person =
-                prompt(
-                    selectedTransactionType ===
-                        "lent"
-                        ? "Who did you lend this money to?"
-                        : "Who did you borrow this money from?"
-                ) || "";
-
-            person =
-                person.trim();
-
-        }
-
-
-        if (!person) {
-
-            showMessage(
-                "Please enter the person's name.",
-                "error"
-            );
-
-            return;
-
-        }
-
-    }
-
-
-    /*
-       EDIT EXISTING TRANSACTION
-    */
 
     if (editingTransactionId) {
 
-        const transaction =
-            transactions.find(
-                t =>
-                    t.id ===
-                    editingTransactionId
+        const index =
+            transactions.findIndex(
+                function (item) {
+
+                    return item.id ===
+                        editingTransactionId;
+
+                }
             );
 
 
-        if (!transaction) {
+        if (index !== -1) {
 
-            showMessage(
-                "Transaction not found.",
-                "error"
-            );
+            transactions[index] = {
 
-            return;
+                ...transactions[index],
+
+                ...data
+
+            };
 
         }
 
 
-        transaction.type =
-            selectedTransactionType;
-
-        transaction.amount =
-            amount;
-
-        transaction.description =
-            description;
-
-        transaction.category =
-            category;
-
-        transaction.date =
-            date;
-
-        transaction.person =
-            person;
-
-
-        saveTransactions();
-
-
         showMessage(
-            "Transaction updated successfully."
+            "Transaction updated successfully.",
+            "success"
         );
 
-    }
+    } else {
 
+        transactions.push({
 
-    /*
-       ADD NEW TRANSACTION
-    */
+            id: generateId("tx_"),
 
-    else {
+            ...data,
 
-        transactions.unshift({
-
-            id:
-                generateId(),
-
-            type:
-                selectedTransactionType,
-
-            amount:
-                amount,
-
-            description:
-                description,
-
-            category:
-                category,
-
-            date:
-                date,
-
-            person:
-                person
+            createdAt:
+                new Date().toISOString()
 
         });
 
 
-        saveTransactions();
-
-
         showMessage(
-            "Transaction saved successfully."
+            "Transaction added successfully.",
+            "success"
         );
 
     }
 
 
+    saveTransactions();
+
     closeTransactionModal();
-
-
-    resetTransactionForm();
-
 
     updateEverything();
 
 }
 
 
-/* =========================================================
-   RESET TRANSACTION FORM
-========================================================= */
-
-function resetTransactionForm() {
-
-    const form =
-        document.getElementById(
-            "transactionForm"
-        );
-
-
-    if (form) {
-
-        form.reset();
-
-    }
-
-
-    editingTransactionId =
-        null;
-
-
-    selectedTransactionType =
-        "income";
-
-
-    updateTransactionTypeButtons();
-
-
-    const date =
-        document.getElementById(
-            "transactionDate"
-        );
-
-
-    if (date) {
-
-        date.value =
-            getToday();
-
-    }
-
-}
-
-
-/* =========================================================
-   EDIT TRANSACTION
-========================================================= */
+/* ================= EDIT TRANSACTION ================= */
 
 function editTransaction(id) {
 
     const transaction =
         transactions.find(
-            t =>
-                t.id === id
+            function (item) {
+
+                return item.id === id;
+
+            }
         );
 
 
-    if (!transaction) {
+    if (!transaction) return;
+
+
+    if (
+        transaction.type ===
+            "repayment_received" ||
+        transaction.type ===
+            "repayment_paid"
+    ) {
+
+        openRepaymentModal(
+            transaction.person || "",
+            transaction.id
+        );
+
         return;
+
     }
 
 
-    editingTransactionId =
-        id;
-
+    editingTransactionId = id;
 
     openTransactionModal(
         transaction.type,
         true
     );
 
-
-    const amount =
-        document.getElementById(
-            "transactionAmount"
-        );
-
-
-    const description =
-        document.getElementById(
-            "transactionDescription"
-        );
-
-
-    const date =
-        document.getElementById(
-            "transactionDate"
-        );
-
-
-    const category =
-        document.getElementById(
-            "transactionCategory"
-        );
-
-
-    if (amount) {
-
-        amount.value =
-            transaction.amount;
-
-    }
-
-
-    if (description) {
-
-        description.value =
-            transaction.description;
-
-    }
-
-
-    if (date) {
-
-        date.value =
-            transaction.date;
-
-    }
-
-
-    if (category) {
-
-        category.value =
-            transaction.category ||
-            "other";
-
-    }
-
 }
 
 
-/* =========================================================
-   DELETE TRANSACTION
-========================================================= */
+/* ================= DELETE TRANSACTION ================= */
 
 function deleteTransaction(id) {
 
     const transaction =
         transactions.find(
-            t =>
-                t.id === id
+            function (item) {
+
+                return item.id === id;
+
+            }
         );
 
 
-    if (!transaction) {
-        return;
-    }
+    if (!transaction) return;
 
 
-    if (
-        !confirm(
-            `Delete "${transaction.description}"?`
-        )
-    ) {
+    const confirmed = confirm(
+        "Delete this transaction?\n\n" +
+        transaction.description +
+        "\n" +
+        formatMoney(transaction.amount)
+    );
 
-        return;
 
-    }
+    if (!confirmed) return;
 
 
     transactions =
         transactions.filter(
-            t =>
-                t.id !== id
+            function (item) {
+
+                return item.id !== id;
+
+            }
         );
 
 
     saveTransactions();
 
-
     updateEverything();
 
 
     showMessage(
-        "Transaction deleted."
+        "Transaction deleted successfully.",
+        "success"
     );
 
 }
 
 
-/* =========================================================
-   RECENT TRANSACTIONS
-========================================================= */
+/* ================= REPAYMENTS ================= */
 
-function renderTransactions() {
-
-    const list =
-        document.getElementById(
-            "recentTransactions"
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    const latest =
-        [...transactions]
-            .sort(
-                (a, b) =>
-                    new Date(b.date) -
-                    new Date(a.date)
-            )
-            .slice(0, 6);
-
-
-    if (latest.length === 0) {
-
-        list.innerHTML =
-            emptyStateHTML(
-                "fa-receipt",
-                "No transactions yet",
-                "Add your first transaction."
-            );
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        latest
-            .map(
-                createTransactionHTML
-            )
-            .join("");
-
-}
-
-
-function createTransactionHTML(
-    transaction
+function openRepaymentModal(
+    personName = "",
+    repaymentId = null
 ) {
 
-    let icon =
-        "fa-wallet";
+    editingRepaymentId = repaymentId;
 
-    let iconClass =
-        "expense";
-
-    let amountClass =
-        "expense";
-
-    let prefix =
-        "-";
-
-
-    switch (
-        transaction.type
-    ) {
-
-        case "income":
-
-            icon =
-                "fa-arrow-down";
-
-            iconClass =
-                "salary";
-
-            amountClass =
-                "income";
-
-            prefix =
-                "+";
-
-            break;
-
-
-        case "expense":
-
-            icon =
-                getExpenseIcon(
-                    transaction.category,
-                    transaction.description
-                );
-
-            iconClass =
-                "expense";
-
-            amountClass =
-                "expense";
-
-            prefix =
-                "-";
-
-            break;
-
-
-        case "lent":
-
-            icon =
-                "fa-hand-holding-dollar";
-
-            iconClass =
-                "lent";
-
-            amountClass =
-                "lent-amount";
-
-            prefix =
-                "-";
-
-            break;
-
-
-        case "borrowed":
-
-            icon =
-                "fa-money-bill-transfer";
-
-            iconClass =
-                "borrowed";
-
-            amountClass =
-                "borrowed-amount";
-
-            prefix =
-                "+";
-
-            break;
-
-
-        case "repayment_received":
-
-            icon =
-                "fa-arrow-left";
-
-            iconClass =
-                "income";
-
-            amountClass =
-                "income";
-
-            prefix =
-                "+";
-
-            break;
-
-
-        case "repayment_paid":
-
-            icon =
-                "fa-arrow-right";
-
-            iconClass =
-                "expense";
-
-            amountClass =
-                "expense";
-
-            prefix =
-                "-";
-
-            break;
-
-    }
-
-
-    const personText =
-        transaction.person
-            ? ` • ${escapeHTML(
-                transaction.person
-            )}`
-            : "";
-
-
-    return `
-
-        <div class="transaction">
-
-            <div class="transaction-icon ${iconClass}">
-
-                <i class="fa-solid ${icon}"></i>
-
-            </div>
-
-
-            <div class="transaction-info">
-
-                <strong>
-                    ${escapeHTML(
-                        transaction.description
-                    )}
-                </strong>
-
-                <span>
-                    ${getRelativeDate(
-                        transaction.date
-                    )}${personText}
-                </span>
-
-            </div>
-
-
-            <div class="transaction-amount ${amountClass}">
-
-                ${prefix}
-                ${formatMoney(
-                    transaction.amount
-                )}
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   RELATIVE DATE
-========================================================= */
-
-function getRelativeDate(
-    dateString
-) {
-
-    if (
-        dateString ===
-        getToday()
-    ) {
-
-        return "Today";
-
-    }
-
-
-    if (
-        dateString ===
-        getYesterday()
-    ) {
-
-        return "Yesterday";
-
-    }
-
-
-    return formatDate(
-        dateString
-    );
-
-}
-
-
-/* =========================================================
-   EXPENSE FILTER SETUP
-========================================================= */
-
-function setupExpenseFilters() {
-
-    const search =
-        document.getElementById(
-            "expenseSearch"
-        );
-
-
-    const category =
-        document.getElementById(
-            "expenseCategory"
-        );
-
-
-    const date =
-        document.getElementById(
-            "expenseDateFilter"
-        );
-
-
-    if (search) {
-
-        search.addEventListener(
-            "input",
-            renderExpenses
-        );
-
-    }
-
-
-    if (category) {
-
-        category.addEventListener(
-            "change",
-            renderExpenses
-        );
-
-    }
-
-
-    if (date) {
-
-        date.addEventListener(
-            "change",
-            renderExpenses
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   CLEAR EXPENSE FILTERS
-========================================================= */
-
-function clearExpenseFilters() {
-
-    const search =
-        document.getElementById(
-            "expenseSearch"
-        );
-
-
-    const category =
-        document.getElementById(
-            "expenseCategory"
-        );
-
-
-    const date =
-        document.getElementById(
-            "expenseDateFilter"
-        );
-
-
-    if (search) {
-        search.value = "";
-    }
-
-
-    if (category) {
-        category.value = "all";
-    }
-
-
-    if (date) {
-        date.value = "";
-    }
-
-
-    renderExpenses();
-
-}
-
-
-/* =========================================================
-   RENDER EXPENSES
-========================================================= */
-
-function renderExpenses() {
-
-    const list =
-        document.getElementById(
-            "expenseList"
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    const searchInput =
-        document.getElementById(
-            "expenseSearch"
-        );
-
-
-    const categoryInput =
-        document.getElementById(
-            "expenseCategory"
-        );
-
-
-    const dateInput =
-        document.getElementById(
-            "expenseDateFilter"
-        );
-
-
-    const search =
-        searchInput
-            ? searchInput.value
-                .toLowerCase()
-                .trim()
-            : "";
-
-
-    const category =
-        categoryInput
-            ? categoryInput.value
-            : "all";
-
-
-    const selectedDate =
-        dateInput
-            ? dateInput.value
-            : "";
-
-
-    let expenseList =
-        transactions.filter(
-            t =>
-                t.type ===
-                "expense"
-        );
-
-
-    /*
-       SEARCH
-    */
-
-    if (search) {
-
-        expenseList =
-            expenseList.filter(
-                function (transaction) {
-
-                    const text =
-                        (
-                            transaction.description ||
-                            ""
-                        ).toLowerCase();
-
-
-                    const cat =
-                        (
-                            transaction.category ||
-                            ""
-                        ).toLowerCase();
-
-
-                    return (
-                        text.includes(search) ||
-                        cat.includes(search)
-                    );
-
-                }
-            );
-
-    }
-
-
-    /*
-       CATEGORY
-    */
-
-    if (
-        category &&
-        category !== "all"
-    ) {
-
-        expenseList =
-            expenseList.filter(
-                t =>
-                    (
-                        t.category ||
-                        "other"
-                    ).toLowerCase() ===
-                    category.toLowerCase()
-            );
-
-    }
-
-
-    /*
-       DATE
-    */
-
-    if (selectedDate) {
-
-        expenseList =
-            expenseList.filter(
-                t =>
-                    t.date ===
-                    selectedDate
-            );
-
-    }
-
-
-    expenseList.sort(
-        (a, b) =>
-            new Date(b.date) -
-            new Date(a.date)
-    );
-
-
-    updateExpenseSummary();
-
-
-    /*
-       EMPTY
-    */
-
-    if (expenseList.length === 0) {
-
-        list.innerHTML =
-            emptyStateHTML(
-                "fa-receipt",
-                "No expenses found",
-                "Try changing your filters or add a new expense."
-            );
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        expenseList
-            .map(
-                createExpenseHTML
-            )
-            .join("");
-
-}
-
-
-/* =========================================================
-   EXPENSE SUMMARY
-========================================================= */
-
-function updateExpenseSummary() {
-
-    const expenses =
-        transactions.filter(
-            t =>
-                t.type ===
-                "expense"
-        );
-
-
-    const total =
-        expenses.reduce(
-            (sum, t) =>
-                sum +
-                Number(
-                    t.amount || 0
-                ),
-            0
-        );
-
-
-    const monthStart =
-        new Date();
-
-    monthStart.setDate(1);
-
-
-    const monthTotal =
-        expenses
-            .filter(
-                function (t) {
-
-                    const date =
-                        new Date(
-                            t.date +
-                            "T00:00:00"
-                        );
-
-
-                    return (
-                        date.getMonth() ===
-                            monthStart.getMonth() &&
-                        date.getFullYear() ===
-                            monthStart.getFullYear()
-                    );
-
-                }
-            )
-            .reduce(
-                (sum, t) =>
-                    sum +
-                    Number(
-                        t.amount || 0
-                    ),
-                0
-            );
-
-
-    const totalElement =
-        document.getElementById(
-            "expensePageTotal"
-        );
-
-
-    const monthElement =
-        document.getElementById(
-            "expenseMonthTotal"
-        );
-
-
-    const countElement =
-        document.getElementById(
-            "expenseTransactionCount"
-        );
-
-
-    if (totalElement) {
-
-        totalElement.textContent =
-            formatMoney(total);
-
-    }
-
-
-    if (monthElement) {
-
-        monthElement.textContent =
-            formatMoney(monthTotal);
-
-    }
-
-
-    if (countElement) {
-
-        countElement.textContent =
-            expenses.length;
-
-    }
-
-}
-
-
-/* =========================================================
-   EXPENSE HTML
-========================================================= */
-
-function createExpenseHTML(
-    transaction
-) {
-
-    const icon =
-        getExpenseIcon(
-            transaction.category,
-            transaction.description
-        );
-
-
-    return `
-
-        <div class="expense-row">
-
-            <div class="expense-row-icon food">
-
-                <i class="fa-solid ${icon}"></i>
-
-            </div>
-
-
-            <div class="expense-row-info">
-
-                <strong>
-                    ${escapeHTML(
-                        transaction.description
-                    )}
-                </strong>
-
-                <span>
-                    ${formatDate(
-                        transaction.date
-                    )}
-                </span>
-
-            </div>
-
-
-            <div class="expense-row-category">
-
-                ${escapeHTML(
-                    getCategoryName(
-                        transaction.category
-                    )
-                )}
-
-            </div>
-
-
-            <div class="expense-row-amount">
-
-                - ${formatMoney(
-                    transaction.amount
-                )}
-
-            </div>
-
-
-            <div class="row-actions">
-
-                <button
-                    class="row-action-btn"
-                    onclick="editTransaction(${transaction.id})"
-                    title="Edit"
-                >
-
-                    <i class="fa-solid fa-pen"></i>
-
-                </button>
-
-
-                <button
-                    class="row-action-btn delete"
-                    onclick="deleteTransaction(${transaction.id})"
-                    title="Delete"
-                >
-
-                    <i class="fa-solid fa-trash"></i>
-
-                </button>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   CATEGORY NAME
-========================================================= */
-
-function getCategoryName(
-    category
-) {
-
-    const names = {
-
-        food: "Food",
-
-        fuel: "Fuel",
-
-        shopping: "Shopping",
-
-        bills: "Bills",
-
-        transport: "Transport",
-
-        health: "Health",
-
-        salary: "Salary",
-
-        business: "Business",
-
-        lent: "Lent",
-
-        borrowed: "Borrowed",
-
-        repayment: "Repayment",
-
-        income: "Income",
-
-        other: "Other"
-
-    };
-
-
-    return (
-        names[category] ||
-        category ||
-        "Other"
-    );
-
-}
-
-
-/* =========================================================
-   EXPENSE ICON
-========================================================= */
-
-function getExpenseIcon(
-    category,
-    description
-) {
-
-    const text =
-        (
-            (category || "") +
-            " " +
-            (description || "")
-        ).toLowerCase();
-
-
-    if (
-        text.includes("food") ||
-        text.includes("meal") ||
-        text.includes("restaurant")
-    ) {
-
-        return "fa-utensils";
-
-    }
-
-
-    if (
-        text.includes("fuel") ||
-        text.includes("petrol") ||
-        text.includes("diesel")
-    ) {
-
-        return "fa-gas-pump";
-
-    }
-
-
-    if (
-        text.includes("shop") ||
-        text.includes("shopping")
-    ) {
-
-        return "fa-bag-shopping";
-
-    }
-
-
-    if (
-        text.includes("bill") ||
-        text.includes("electricity") ||
-        text.includes("water")
-    ) {
-
-        return "fa-file-invoice-dollar";
-
-    }
-
-
-    if (
-        text.includes("phone") ||
-        text.includes("mobile")
-    ) {
-
-        return "fa-mobile-screen";
-
-    }
-
-
-    if (
-        text.includes("travel") ||
-        text.includes("transport")
-    ) {
-
-        return "fa-car";
-
-    }
-
-
-    if (
-        text.includes("health") ||
-        text.includes("medicine")
-    ) {
-
-        return "fa-heart-pulse";
-
-    }
-
-
-    return "fa-wallet";
-
-}
-
-
-/* =========================================================
-   FRIEND MODAL
-========================================================= */
-
-function openFriendModal() {
 
     const modal =
         document.getElementById(
-            "friendModal"
+            "repaymentModal"
         );
-
-
-    if (!modal) {
-        return;
-    }
-
-
-    editingFriendId =
-        null;
-
-
-    const form =
-        document.getElementById(
-            "friendForm"
-        );
-
-
-    if (form) {
-        form.reset();
-    }
 
 
     const title =
-        modal.querySelector(
-            ".modal-header h2"
-        );
-
-
-    if (title) {
-
-        title.textContent =
-            "Add Friend";
-
-    }
-
-
-    const button =
-        modal.querySelector(
-            ".save-btn"
-        );
-
-
-    if (button) {
-
-        button.innerHTML =
-            '<i class="fa-solid fa-user-plus"></i> Save Friend';
-
-    }
-
-
-    modal.classList.add(
-        "show"
-    );
-
-    document.body.classList.add(
-        "modal-open"
-    );
-
-}
-
-
-function closeFriendModal() {
-
-    const modal =
         document.getElementById(
-            "friendModal"
+            "repaymentModalTitle"
         );
 
 
-    if (modal) {
-
-        modal.classList.remove(
-            "show"
-        );
-
-    }
-
-
-    document.body.classList.remove(
-        "modal-open"
-    );
-
-
-    editingFriendId =
-        null;
-
-}
-
-
-/* =========================================================
-   SAVE FRIEND
-========================================================= */
-
-function saveFriend(event) {
-
-    event.preventDefault();
-
-
-    const nameInput =
+    const submit =
         document.getElementById(
-            "friendName"
+            "repaymentSubmitText"
         );
 
 
-    const phoneInput =
-        document.getElementById(
-            "friendPhone"
-        );
+    if (repaymentId) {
 
+        const repayment =
+            transactions.find(
+                function (item) {
 
-    const noteInput =
-        document.getElementById(
-            "friendNote"
-        );
-
-
-    const name =
-        nameInput
-            ? nameInput.value.trim()
-            : "";
-
-
-    const phone =
-        phoneInput
-            ? phoneInput.value.trim()
-            : "";
-
-
-    const note =
-        noteInput
-            ? noteInput.value.trim()
-            : "";
-
-
-    if (!name) {
-
-        showMessage(
-            "Please enter friend's name.",
-            "error"
-        );
-
-        return;
-
-    }
-
-
-    /*
-       EDIT
-    */
-
-    if (editingFriendId) {
-
-        const friend =
-            friends.find(
-                f =>
-                    f.id ===
-                    editingFriendId
-            );
-
-
-        if (friend) {
-
-            const oldName =
-                friend.name;
-
-
-            friend.name =
-                name;
-
-            friend.phone =
-                phone;
-
-            friend.note =
-                note ||
-                "Friend";
-
-
-            /*
-               Update transaction person
-               when friend name changes.
-            */
-
-            transactions.forEach(
-                function (transaction) {
-
-                    if (
-                        transaction.person &&
-                        transaction.person.toLowerCase() ===
-                        oldName.toLowerCase()
-                    ) {
-
-                        transaction.person =
-                            name;
-
-                    }
+                    return item.id ===
+                        repaymentId;
 
                 }
             );
 
 
-            saveFriends();
-            saveTransactions();
+        if (!repayment) return;
 
 
-            showMessage(
-                "Friend updated successfully."
-            );
+        document.getElementById(
+            "repaymentPerson"
+        ).value =
+            repayment.person || "";
 
-        }
+
+        document.getElementById(
+            "repaymentDirection"
+        ).value =
+            repayment.type ===
+                "repayment_paid"
+                ? "paid"
+                : "received";
+
+
+        document.getElementById(
+            "repaymentAmount"
+        ).value =
+            repayment.amount;
+
+
+        document.getElementById(
+            "repaymentDate"
+        ).value =
+            repayment.date || getToday();
+
+
+        document.getElementById(
+            "repaymentNote"
+        ).value =
+            repayment.note || "";
+
+        title.textContent =
+            "Edit Repayment";
+
+        submit.textContent =
+            "Update Repayment";
+
+    } else {
+
+        document.getElementById(
+            "repaymentPerson"
+        ).value =
+            personName || "";
+
+        document.getElementById(
+            "repaymentAmount"
+        ).value = "";
+
+        document.getElementById(
+            "repaymentDate"
+        ).value = getToday();
+
+        document.getElementById(
+            "repaymentNote"
+        ).value = "";
+
+        document.getElementById(
+            "repaymentDirection"
+        ).value = "received";
+
+        title.textContent =
+            "Record Repayment";
+
+        submit.textContent =
+            "Save Repayment";
 
     }
 
 
-    /*
-       ADD
-    */
-
-    else {
-
-        const exists =
-            friends.some(
-                f =>
-                    f.name.toLowerCase() ===
-                    name.toLowerCase()
-            );
-
-
-        if (exists) {
-
-            showMessage(
-                "This friend already exists.",
-                "error"
-            );
-
-            return;
-
-        }
-
-
-        friends.push({
-
-            id:
-                generateId(),
-
-            name:
-                name,
-
-            phone:
-                phone,
-
-            note:
-                note ||
-                "Friend"
-
-        });
-
-
-        saveFriends();
-
-
-        showMessage(
-            "Friend added successfully."
-        );
-
-    }
-
-
-    closeFriendModal();
-
-
-    updateEverything();
+    modal.classList.add("show");
 
 }
 
 
-/* =========================================================
-   RENDER FRIENDS
-========================================================= */
+function closeRepaymentModal() {
 
-function renderFriends() {
+    document
+        .getElementById("repaymentModal")
+        .classList.remove("show");
 
-    const list =
-        document.getElementById(
-            "friendsList"
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    let totalOwed = 0;
-    let activeCount = 0;
-
-
-    friends.forEach(
-        function (friend) {
-
-            const balance =
-                getPersonOwedAmount(
-                    friend.name
-                );
-
-
-            totalOwed +=
-                balance;
-
-
-            if (balance > 0) {
-
-                activeCount++;
-
-            }
-
-        }
-    );
-
-
-    const totalElement =
-        document.getElementById(
-            "friendsTotalOwed"
-        );
-
-
-    const countElement =
-        document.getElementById(
-            "friendsCount"
-        );
-
-
-    const activeElement =
-        document.getElementById(
-            "friendsActiveCount"
-        );
-
-
-    if (totalElement) {
-
-        totalElement.textContent =
-            formatMoney(totalOwed);
-
-    }
-
-
-    if (countElement) {
-
-        countElement.textContent =
-            friends.length;
-
-    }
-
-
-    if (activeElement) {
-
-        activeElement.textContent =
-            activeCount;
-
-    }
-
-
-    if (friends.length === 0) {
-
-        list.innerHTML =
-            emptyStateHTML(
-                "fa-user-group",
-                "No friends added",
-                "Add a friend to start tracking money."
-            );
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        friends
-            .map(
-                createFriendHTML
-            )
-            .join("");
+    editingRepaymentId = null;
 
 }
 
 
-/* =========================================================
-   FRIEND BALANCE
-========================================================= */
-
-function getPersonOwedAmount(
-    name
-) {
-
-    let lent = 0;
-    let received = 0;
-
-
-    transactions.forEach(
-        function (t) {
-
-            if (
-                !t.person ||
-                t.person.toLowerCase() !==
-                name.toLowerCase()
-            ) {
-
-                return;
-
-            }
-
-
-            if (
-                t.type === "lent"
-            ) {
-
-                lent +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-
-            if (
-                t.type ===
-                "repayment_received"
-            ) {
-
-                received +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-        }
-    );
-
-
-    return Math.max(
-        0,
-        lent - received
-    );
-
-}
-
-
-/* =========================================================
-   FRIEND HTML
-========================================================= */
-
-function createFriendHTML(
-    friend
-) {
-
-    const owed =
-        getPersonOwedAmount(
-            friend.name
-        );
-
-
-    return `
-
-        <div class="person-card">
-
-            <div class="person-card-header">
-
-                <div class="person-avatar">
-
-                    ${escapeHTML(
-                        getInitials(
-                            friend.name
-                        )
-                    )}
-
-                </div>
-
-
-                <div>
-
-                    <h3>
-                        ${escapeHTML(
-                            friend.name
-                        )}
-                    </h3>
-
-                    <span>
-                        ${escapeHTML(
-                            friend.note ||
-                            "Friend"
-                        )}
-                    </span>
-
-                </div>
-
-
-                <button
-                    class="delete-person"
-                    onclick="deleteFriend(${friend.id})"
-                    title="Delete friend"
-                >
-
-                    <i class="fa-solid fa-trash"></i>
-
-                </button>
-
-            </div>
-
-
-            ${
-                friend.phone
-                    ? `
-                    <div style="margin-top:10px; font-size:13px; opacity:.7;">
-                        <i class="fa-solid fa-phone"></i>
-                        ${escapeHTML(
-                            friend.phone
-                        )}
-                    </div>
-                    `
-                    : ""
-            }
-
-
-            <div class="person-money">
-
-                <div>
-
-                    <small>
-                        Owes You
-                    </small>
-
-                    <strong class="owed">
-                        ${formatMoney(owed)}
-                    </strong>
-
-                </div>
-
-
-                <div style="display:flex; gap:8px;">
-
-                    <button
-                        class="primary-btn"
-                        onclick="openRepaymentModal('${escapeAttribute(friend.name)}')"
-                    >
-
-                        <i class="fa-solid fa-money-bill-transfer"></i>
-
-                        Repayment
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   DELETE FRIEND
-========================================================= */
-
-function deleteFriend(id) {
-
-    const friend =
-        friends.find(
-            f =>
-                f.id === id
-        );
-
-
-    if (!friend) {
-        return;
-    }
-
-
-    if (
-        !confirm(
-            `Delete friend "${friend.name}"?`
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    friends =
-        friends.filter(
-            f =>
-                f.id !== id
-        );
-
-
-    saveFriends();
-
-
-    renderFriends();
-
-
-    showMessage(
-        "Friend deleted."
-    );
-
-}
-
-
-/* =========================================================
-   DEBT MODAL
-========================================================= */
-
-function openDebtModal() {
-
-    const modal =
-        document.getElementById(
-            "debtModal"
-        );
-
-
-    if (!modal) {
-        return;
-    }
-
-
-    editingDebtId =
-        null;
-
-
-    const form =
-        document.getElementById(
-            "debtForm"
-        );
-
-
-    if (form) {
-        form.reset();
-    }
-
-
-    const date =
-        document.getElementById(
-            "debtDate"
-        );
-
-
-    if (date) {
-        date.value =
-            getToday();
-    }
-
-
-    modal.classList.add(
-        "show"
-    );
-
-    document.body.classList.add(
-        "modal-open"
-    );
-
-}
-
-
-function closeDebtModal() {
-
-    const modal =
-        document.getElementById(
-            "debtModal"
-        );
-
-
-    if (modal) {
-
-        modal.classList.remove(
-            "show"
-        );
-
-    }
-
-
-    document.body.classList.remove(
-        "modal-open"
-    );
-
-
-    editingDebtId =
-        null;
-
-}
-
-
-/* =========================================================
-   SAVE DEBT
-========================================================= */
-
-function saveDebt(event) {
+function saveRepayment(event) {
 
     event.preventDefault();
 
 
-    const personInput =
-        document.getElementById(
-            "debtPerson"
-        );
-
-
-    const amountInput =
-        document.getElementById(
-            "debtAmount"
-        );
-
-
-    const dateInput =
-        document.getElementById(
-            "debtDate"
-        );
-
-
-    const dueDateInput =
-        document.getElementById(
-            "debtDueDate"
-        );
-
-
-    const noteInput =
-        document.getElementById(
-            "debtNote"
-        );
-
-
     const person =
-        personInput
-            ? personInput.value.trim()
-            : "";
+        document.getElementById(
+            "repaymentPerson"
+        ).value.trim();
 
 
-    const amount =
-        Number(
-            amountInput
-                ? amountInput.value
-                : 0
-        );
+    const direction =
+        document.getElementById(
+            "repaymentDirection"
+        ).value;
+
+
+    const amount = Number(
+        document.getElementById(
+            "repaymentAmount"
+        ).value
+    );
 
 
     const date =
-        dateInput
-            ? dateInput.value
-            : getToday();
-
-
-    const dueDate =
-        dueDateInput
-            ? dueDateInput.value
-            : "";
+        document.getElementById(
+            "repaymentDate"
+        ).value;
 
 
     const note =
-        noteInput
-            ? noteInput.value.trim()
-            : "";
+        document.getElementById(
+            "repaymentNote"
+        ).value.trim();
 
 
     if (!person) {
 
         showMessage(
-            "Please enter the person or organization.",
+            "Please enter the person's name.",
             "error"
         );
 
@@ -3033,524 +1331,157 @@ function saveDebt(event) {
     }
 
 
+    const newType =
+        direction === "received"
+            ? "repayment_received"
+            : "repayment_paid";
+
+
+    const oldId =
+        editingRepaymentId;
+
+
     /*
-       Debt is recorded as borrowed money.
+        Check outstanding amount.
+
+        When editing, exclude the old repayment
+        from the calculation first.
     */
 
-    transactions.unshift({
-
-        id:
-            generateId(),
-
-        type:
-            "borrowed",
-
-        amount:
-            amount,
-
-        description:
-            note ||
-            `Borrowed from ${person}`,
-
-        category:
-            "borrowed",
-
-        date:
-            date,
-
-        person:
+    const outstanding =
+        getOutstandingForPerson(
             person,
+            newType,
+            oldId
+        );
 
-        dueDate:
-            dueDate
 
-    });
+    if (
+        amount >
+        outstanding + 0.001
+    ) {
+
+        showMessage(
+            "Amount is higher than the outstanding balance. " +
+            "Maximum available: " +
+            formatMoney(outstanding),
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const description =
+        direction === "received"
+            ? "Repayment received from " + person
+            : "Repayment paid to " + person;
+
+
+    const data = {
+
+        type: newType,
+
+        amount: amount,
+
+        description: description,
+
+        person: person,
+
+        date: date || getToday(),
+
+        category: "other",
+
+        note: note,
+
+        updatedAt:
+            new Date().toISOString()
+
+    };
+
+
+    if (editingRepaymentId) {
+
+        const index =
+            transactions.findIndex(
+                function (item) {
+
+                    return item.id ===
+                        editingRepaymentId;
+
+                }
+            );
+
+
+        if (index !== -1) {
+
+            transactions[index] = {
+
+                ...transactions[index],
+
+                ...data
+
+            };
+
+        }
+
+
+        showMessage(
+            "Repayment updated successfully.",
+            "success"
+        );
+
+    } else {
+
+        transactions.push({
+
+            id: generateId("rep_"),
+
+            ...data,
+
+            createdAt:
+                new Date().toISOString()
+
+        });
+
+
+        showMessage(
+            "Repayment added successfully.",
+            "success"
+        );
+
+    }
 
 
     saveTransactions();
 
-
-    closeDebtModal();
-
+    closeRepaymentModal();
 
     updateEverything();
 
+}
 
-    showMessage(
-        "Debt added successfully."
-    );
+
+/* ================= PERSON BALANCE ================= */
+
+function normalizePerson(name) {
+
+    return String(name || "")
+        .trim()
+        .toLowerCase();
 
 }
 
 
-/* =========================================================
-   DEBT CALCULATIONS
-========================================================= */
-
-function getDebtSummary() {
-
-    let totalDebt = 0;
-    let remaining = 0;
-    let active = 0;
-
-
-    const people = {};
-
-
-    transactions.forEach(
-        function (t) {
-
-            if (!t.person) {
-                return;
-            }
-
-
-            const key =
-                t.person.toLowerCase();
-
-
-            if (!people[key]) {
-
-                people[key] = {
-
-                    borrowed: 0,
-
-                    paid: 0
-
-                };
-
-            }
-
-
-            if (
-                t.type ===
-                "borrowed"
-            ) {
-
-                people[key].borrowed +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-
-            if (
-                t.type ===
-                "repayment_paid"
-            ) {
-
-                people[key].paid +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-        }
-    );
-
-
-    Object.values(
-        people
-    ).forEach(
-        function (person) {
-
-            totalDebt +=
-                person.borrowed;
-
-
-            const balance =
-                Math.max(
-                    0,
-                    person.borrowed -
-                    person.paid
-                );
-
-
-            remaining +=
-                balance;
-
-
-            if (balance > 0) {
-
-                active++;
-
-            }
-
-        }
-    );
-
-
-    return {
-
-        totalDebt:
-            totalDebt,
-
-        remaining:
-            remaining,
-
-        active:
-            active
-
-    };
-
-}
-
-
-/* =========================================================
-   RENDER DEBTS
-========================================================= */
-
-function renderDebts() {
-
-    const list =
-        document.getElementById(
-            "debtsList"
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    const summary =
-        getDebtSummary();
-
-
-    const total =
-        document.getElementById(
-            "debtsTotal"
-        );
-
-
-    const remaining =
-        document.getElementById(
-            "debtsRemaining"
-        );
-
-
-    const active =
-        document.getElementById(
-            "debtsActiveCount"
-        );
-
-
-    if (total) {
-
-        total.textContent =
-            formatMoney(
-                summary.totalDebt
-            );
-
-    }
-
-
-    if (remaining) {
-
-        remaining.textContent =
-            formatMoney(
-                summary.remaining
-            );
-
-    }
-
-
-    if (active) {
-
-        active.textContent =
-            summary.active;
-
-    }
-
-
-    const people = {};
-
-
-    transactions.forEach(
-        function (t) {
-
-            if (!t.person) {
-                return;
-            }
-
-
-            const key =
-                t.person.toLowerCase();
-
-
-            if (!people[key]) {
-
-                people[key] = {
-
-                    name:
-                        t.person,
-
-                    borrowed:
-                        0,
-
-                    paid:
-                        0,
-
-                    lent:
-                        0,
-
-                    received:
-                        0
-
-                };
-
-            }
-
-
-            const person =
-                people[key];
-
-
-            if (
-                t.type ===
-                "borrowed"
-            ) {
-
-                person.borrowed +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-
-            if (
-                t.type ===
-                "repayment_paid"
-            ) {
-
-                person.paid +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-
-            if (
-                t.type ===
-                "lent"
-            ) {
-
-                person.lent +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-
-            if (
-                t.type ===
-                "repayment_received"
-            ) {
-
-                person.received +=
-                    Number(
-                        t.amount || 0
-                    );
-
-            }
-
-        }
-    );
-
-
-    const debtPeople =
-        Object.values(
-            people
-        ).filter(
-            function (person) {
-
-                const owe =
-                    person.borrowed -
-                    person.paid;
-
-                const owedToYou =
-                    person.lent -
-                    person.received;
-
-
-                return (
-                    owe > 0 ||
-                    owedToYou > 0
-                );
-
-            }
-        );
-
-
-    if (
-        debtPeople.length ===
-        0
-    ) {
-
-        list.innerHTML =
-            emptyStateHTML(
-                "fa-credit-card",
-                "No active debts",
-                "Your borrowed money will appear here."
-            );
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        debtPeople
-            .map(
-                createDebtHTML
-            )
-            .join("");
-
-}
-
-
-/* =========================================================
-   DEBT HTML
-========================================================= */
-
-function createDebtHTML(
-    person
+function getOutstandingForPerson(
+    person,
+    repaymentType,
+    excludeId = null
 ) {
 
-    const youOwe =
-        Math.max(
-            0,
-            person.borrowed -
-            person.paid
-        );
-
-
-    const owedToYou =
-        Math.max(
-            0,
-            person.lent -
-            person.received
-        );
-
-
-    let label =
-        "You Owe";
-
-
-    let amount =
-        youOwe;
-
-
-    let amountClass =
-        "debt";
-
-
-    if (
-        owedToYou >
-        0
-    ) {
-
-        label =
-            "Owes You";
-
-        amount =
-            owedToYou;
-
-        amountClass =
-            "owed";
-
-    }
-
-
-    return `
-
-        <div class="person-card">
-
-            <div class="person-card-header">
-
-                <div class="person-avatar">
-
-                    ${escapeHTML(
-                        getInitials(
-                            person.name
-                        )
-                    )}
-
-                </div>
-
-
-                <div>
-
-                    <h3>
-                        ${escapeHTML(
-                            person.name
-                        )}
-                    </h3>
-
-                    <span>
-                        Debt overview
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="person-money">
-
-                <div>
-
-                    <small>
-                        ${label}
-                    </small>
-
-                    <strong class="${amountClass}">
-                        ${formatMoney(amount)}
-                    </strong>
-
-                </div>
-
-
-                <button
-                    class="primary-btn"
-                    onclick="openRepaymentModal('${escapeAttribute(person.name)}')"
-                >
-
-                    <i class="fa-solid fa-money-bill-transfer"></i>
-
-                    Repayment
-
-                </button>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   REPAYMENT
-========================================================= */
-
-function openRepaymentModal(
-    personName
-) {
-
-    const personTransactions =
-        transactions.filter(
-            t =>
-                t.person &&
-                t.person.toLowerCase() ===
-                personName.toLowerCase()
-        );
+    const key =
+        normalizePerson(person);
 
 
     let lent = 0;
@@ -3560,1238 +1491,422 @@ function openRepaymentModal(
     let paid = 0;
 
 
-    personTransactions.forEach(
-        function (t) {
+    transactions.forEach(function (transaction) {
 
-            const amount =
-                Number(
-                    t.amount || 0
-                );
-
-
-            if (
-                t.type === "lent"
-            ) {
-
-                lent += amount;
-
-            }
-
-
-            if (
-                t.type ===
-                "repayment_received"
-            ) {
-
-                received += amount;
-
-            }
-
-
-            if (
-                t.type ===
-                "borrowed"
-            ) {
-
-                borrowed += amount;
-
-            }
-
-
-            if (
-                t.type ===
-                "repayment_paid"
-            ) {
-
-                paid += amount;
-
-            }
-
+        if (
+            excludeId &&
+            transaction.id === excludeId
+        ) {
+            return;
         }
-    );
-
-
-    const friendOwesYou =
-        Math.max(
-            0,
-            lent - received
-        );
-
-
-    const youOweFriend =
-        Math.max(
-            0,
-            borrowed - paid
-        );
-
-
-    if (
-        friendOwesYou <= 0 &&
-        youOweFriend <= 0
-    ) {
-
-        showMessage(
-            "No active debt found for this person.",
-            "error"
-        );
-
-        return;
-
-    }
-
-
-    /*
-       Ask which direction when both exist.
-    */
-
-    let repaymentType =
-        "";
-
-
-    if (
-        friendOwesYou > 0 &&
-        youOweFriend > 0
-    ) {
-
-        const choice =
-            prompt(
-                `Choose repayment type for ${personName}:\n\n1 = Receive money from them\n2 = Pay money to them`
-            );
 
 
         if (
-            choice !== "1" &&
-            choice !== "2"
+            normalizePerson(
+                transaction.person
+            ) !== key
         ) {
-
             return;
-
         }
 
 
-        repaymentType =
-            choice === "1"
-                ? "received"
-                : "paid";
-
-    }
-
-    else if (
-        friendOwesYou > 0
-    ) {
-
-        repaymentType =
-            "received";
-
-    }
-
-    else {
-
-        repaymentType =
-            "paid";
-
-    }
+        const amount =
+            Number(transaction.amount || 0);
 
 
-    const available =
-        repaymentType ===
-            "received"
-            ? friendOwesYou
-            : youOweFriend;
+        if (transaction.type === "lent") {
+            lent += amount;
+        }
 
 
-    const amountText =
-        prompt(
-            `Enter repayment amount.\nMaximum: ${formatMoney(available)}`
-        );
+        if (
+            transaction.type ===
+            "repayment_received"
+        ) {
+            received += amount;
+        }
 
 
-    if (
-        amountText ===
-        null
-    ) {
-
-        return;
-
-    }
+        if (
+            transaction.type ===
+            "borrowed"
+        ) {
+            borrowed += amount;
+        }
 
 
-    const amount =
-        Number(amountText);
-
-
-    if (
-        !amount ||
-        amount <= 0
-    ) {
-
-        showMessage(
-            "Enter a valid repayment amount.",
-            "error"
-        );
-
-        return;
-
-    }
-
-
-    const actualAmount =
-        Math.min(
-            amount,
-            available
-        );
-
-
-    transactions.unshift({
-
-        id:
-            generateId(),
-
-        type:
-            repaymentType ===
-                "received"
-                ? "repayment_received"
-                : "repayment_paid",
-
-        amount:
-            actualAmount,
-
-        description:
-            repaymentType ===
-                "received"
-                ? `Repayment received from ${personName}`
-                : `Repayment paid to ${personName}`,
-
-        category:
-            "repayment",
-
-        person:
-            personName,
-
-        date:
-            getToday()
+        if (
+            transaction.type ===
+            "repayment_paid"
+        ) {
+            paid += amount;
+        }
 
     });
 
 
-    saveTransactions();
-
-
-    updateEverything();
-
-
-    showMessage(
+    if (
         repaymentType ===
-            "received"
-            ? "Repayment received recorded."
-            : "Repayment paid recorded."
-    );
-
-}
-
-
-/* =========================================================
-   REPORTS
-========================================================= */
-
-function renderReports() {
-
-    const data =
-        calculateFinancialData();
-
-
-    const income =
-        document.getElementById(
-            "reportIncome"
-        );
-
-
-    const expenses =
-        document.getElementById(
-            "reportExpenses"
-        );
-
-
-    const lent =
-        document.getElementById(
-            "reportLent"
-        );
-
-
-    const borrowed =
-        document.getElementById(
-            "reportBorrowed"
-        );
-
-
-    if (income) {
-
-        income.textContent =
-            formatMoney(
-                data.income
-            );
-
-    }
-
-
-    if (expenses) {
-
-        expenses.textContent =
-            formatMoney(
-                data.expenses
-            );
-
-    }
-
-
-    if (lent) {
-
-        lent.textContent =
-            formatMoney(
-                data.lent
-            );
-
-    }
-
-
-    if (borrowed) {
-
-        borrowed.textContent =
-            formatMoney(
-                data.borrowed
-            );
-
-    }
-
-
-    renderMonthlyReport();
-
-    renderCategoryReport();
-
-}
-
-
-/* =========================================================
-   MONTHLY REPORT
-========================================================= */
-
-function renderMonthlyReport() {
-
-    const container =
-        document.getElementById(
-            "monthlyReport"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    const months = {};
-
-
-    transactions.forEach(
-        function (t) {
-
-            if (
-                t.type !==
-                "expense"
-            ) {
-
-                return;
-
-            }
-
-
-            const date =
-                new Date(
-                    t.date +
-                    "T00:00:00"
-                );
-
-
-            const key =
-                date.getFullYear() +
-                "-" +
-                String(
-                    date.getMonth() + 1
-                ).padStart(
-                    2,
-                    "0"
-                );
-
-
-            if (!months[key]) {
-
-                months[key] = {
-
-                    label:
-                        date.toLocaleDateString(
-                            "en-US",
-                            {
-                                month: "long",
-                                year: "numeric"
-                            }
-                        ),
-
-                    amount:
-                        0
-
-                };
-
-            }
-
-
-            months[key].amount +=
-                Number(
-                    t.amount || 0
-                );
-
-        }
-    );
-
-
-    /*
-       Newest month first
-    */
-
-    const values =
-        Object.entries(
-            months
-        )
-        .sort(
-            (a, b) =>
-                b[0].localeCompare(
-                    a[0]
-                )
-        )
-        .slice(0, 6)
-        .map(
-            item =>
-                item[1]
-        );
-
-
-    if (
-        values.length ===
-        0
+        "repayment_received"
     ) {
 
-        container.innerHTML =
-            emptyStateHTML(
-                "fa-chart-column",
-                "No report data",
-                "Add expenses to generate reports."
-            );
-
-        return;
+        return Math.max(
+            0,
+            lent - received
+        );
 
     }
 
 
-    const max =
-        Math.max(
-            ...values.map(
-                v =>
-                    v.amount
+    return Math.max(
+        0,
+        borrowed - paid
+    );
+
+}
+
+
+function getPersonBalances(person) {
+
+    const key =
+        normalizePerson(person);
+
+
+    let lent = 0;
+    let received = 0;
+
+    let borrowed = 0;
+    let paid = 0;
+
+
+    transactions.forEach(function (transaction) {
+
+        if (
+            normalizePerson(
+                transaction.person
+            ) !== key
+        ) {
+            return;
+        }
+
+
+        const amount =
+            Number(transaction.amount || 0);
+
+
+        if (transaction.type === "lent") {
+            lent += amount;
+        }
+
+
+        if (
+            transaction.type ===
+            "repayment_received"
+        ) {
+            received += amount;
+        }
+
+
+        if (
+            transaction.type ===
+            "borrowed"
+        ) {
+            borrowed += amount;
+        }
+
+
+        if (
+            transaction.type ===
+            "repayment_paid"
+        ) {
+            paid += amount;
+        }
+
+    });
+
+
+    return {
+
+        lent,
+        received,
+
+        borrowed,
+        paid,
+
+        owesYou:
+            Math.max(
+                0,
+                lent - received
             ),
-            1
-        );
 
-
-    container.innerHTML =
-        values
-            .map(
-                function (month) {
-
-                    const percent =
-                        (
-                            month.amount /
-                            max
-                        ) * 100;
-
-
-                    return `
-
-                        <div class="month-row">
-
-                            <div class="month-row-top">
-
-                                <strong>
-                                    ${escapeHTML(
-                                        month.label
-                                    )}
-                                </strong>
-
-                                <span>
-                                    ${formatMoney(
-                                        month.amount
-                                    )}
-                                </span>
-
-                            </div>
-
-
-                            <div class="report-progress">
-
-                                <span
-                                    style="width:${percent}%"
-                                ></span>
-
-                            </div>
-
-                        </div>
-
-                    `;
-
-                }
+        youOwe:
+            Math.max(
+                0,
+                borrowed - paid
             )
-            .join("");
+
+    };
 
 }
 
 
-/* =========================================================
-   CATEGORY REPORT
-========================================================= */
+/* ================= TRANSACTION DISPLAY ================= */
 
-function renderCategoryReport() {
+function getTransactionLabel(transaction) {
 
-    const container =
-        document.getElementById(
-            "categoryReport"
-        );
+    switch (transaction.type) {
 
+        case "income":
+            return "Income";
 
-    if (!container) {
-        return;
+        case "expense":
+            return "Expense";
+
+        case "lent":
+            return "Money Lent";
+
+        case "borrowed":
+            return "Money Borrowed";
+
+        case "repayment_received":
+            return "Repayment Received";
+
+        case "repayment_paid":
+            return "Repayment Paid";
+
+        case "adjustment":
+
+            return transaction.adjustmentDirection ===
+                "decrease"
+                ? "Balance Decreased"
+                : "Balance Increased";
+
+        default:
+            return "Transaction";
+
     }
 
-
-    const categories = {};
-
-
-    transactions.forEach(
-        function (t) {
-
-            if (
-                t.type !==
-                "expense"
-            ) {
-
-                return;
-
-            }
+}
 
 
-            const category =
-                t.category ||
-                "other";
+function getTransactionIcon(transaction) {
+
+    switch (transaction.type) {
+
+        case "income":
+            return "fa-arrow-trend-up";
+
+        case "expense":
+            return "fa-arrow-trend-down";
+
+        case "lent":
+            return "fa-hand-holding-dollar";
+
+        case "borrowed":
+            return "fa-money-bill-transfer";
+
+        case "repayment_received":
+        case "repayment_paid":
+            return "fa-rotate";
+
+        case "adjustment":
+            return "fa-sliders";
+
+        default:
+            return "fa-money-bill";
+
+    }
+
+}
 
 
-            categories[category] =
-                (
-                    categories[category] ||
-                    0
-                ) +
-                Number(
-                    t.amount || 0
-                );
+function getTransactionAmountClass(
+    transaction
+) {
 
-        }
-    );
+    if (
+        transaction.type === "income" ||
+        transaction.type === "borrowed" ||
+        transaction.type === "repayment_received"
+    ) {
 
+        return "amount-positive";
 
-    const values =
-        Object.entries(
-            categories
-        )
-        .sort(
-            (a, b) =>
-                b[1] - a[1]
-        );
+    }
 
 
     if (
-        values.length ===
-        0
+        transaction.type === "expense" ||
+        transaction.type === "lent" ||
+        transaction.type === "repayment_paid"
     ) {
 
-        container.innerHTML =
-            emptyStateHTML(
-                "fa-chart-pie",
-                "No categories yet",
-                "Your expense categories will appear here."
-            );
-
-        return;
+        return "amount-negative";
 
     }
 
 
-    const max =
-        values[0][1];
-
-
-    container.innerHTML =
-        values
-            .slice(0, 8)
-            .map(
-                function (item) {
-
-                    const category =
-                        item[0];
-
-                    const amount =
-                        item[1];
-
-
-                    const percent =
-                        (
-                            amount /
-                            max
-                        ) * 100;
-
-
-                    return `
-
-                        <div class="category-row">
-
-                            <div class="category-name">
-
-                                ${escapeHTML(
-                                    getCategoryName(
-                                        category
-                                    )
-                                )}
-
-                            </div>
-
-
-                            <div class="category-bar">
-
-                                <span
-                                    style="width:${percent}%"
-                                ></span>
-
-                            </div>
-
-
-                            <div class="category-value">
-
-                                ${formatMoney(
-                                    amount
-                                )}
-
-                            </div>
-
-                        </div>
-
-                    `;
-
-                }
-            )
-            .join("");
+    return "amount-adjustment";
 
 }
 
 
-/* =========================================================
-   REMINDER MODAL
-========================================================= */
-
-function openReminderModal() {
-
-    const modal =
-        document.getElementById(
-            "reminderModal"
-        );
-
-
-    if (!modal) {
-        return;
-    }
-
-
-    editingReminderId =
-        null;
-
-
-    const form =
-        document.getElementById(
-            "reminderForm"
-        );
-
-
-    if (form) {
-        form.reset();
-    }
-
-
-    const date =
-        document.getElementById(
-            "reminderDate"
-        );
-
-
-    if (date) {
-
-        date.value =
-            getToday();
-
-    }
-
-
-    const title =
-        modal.querySelector(
-            ".modal-header h2"
-        );
-
-
-    const button =
-        modal.querySelector(
-            ".save-btn"
-        );
-
-
-    if (title) {
-
-        title.textContent =
-            "Add Reminder";
-
-    }
-
-
-    if (button) {
-
-        button.innerHTML =
-            '<i class="fa-solid fa-bell"></i> Save Reminder';
-
-    }
-
-
-    modal.classList.add(
-        "show"
-    );
-
-    document.body.classList.add(
-        "modal-open"
-    );
-
-}
-
-
-function closeReminderModal() {
-
-    const modal =
-        document.getElementById(
-            "reminderModal"
-        );
-
-
-    if (modal) {
-
-        modal.classList.remove(
-            "show"
-        );
-
-    }
-
-
-    document.body.classList.remove(
-        "modal-open"
-    );
-
-
-    editingReminderId =
-        null;
-
-}
-
-
-/* =========================================================
-   SAVE REMINDER
-========================================================= */
-
-function saveReminder(event) {
-
-    event.preventDefault();
-
-
-    const titleInput =
-        document.getElementById(
-            "reminderTitle"
-        );
-
-
-    const amountInput =
-        document.getElementById(
-            "reminderAmount"
-        );
-
-
-    const dateInput =
-        document.getElementById(
-            "reminderDate"
-        );
-
-
-    const noteInput =
-        document.getElementById(
-            "reminderNote"
-        );
-
-
-    const title =
-        titleInput
-            ? titleInput.value.trim()
-            : "";
-
+function getSignedAmount(transaction) {
 
     const amount =
-        Number(
-            amountInput
-                ? amountInput.value
-                : 0
-        );
+        Number(transaction.amount || 0);
 
 
-    const date =
-        dateInput
-            ? dateInput.value
-            : "";
-
-
-    const note =
-        noteInput
-            ? noteInput.value.trim()
-            : "";
-
-
-    if (!title) {
-
-        showMessage(
-            "Please enter a reminder.",
-            "error"
-        );
-
-        return;
-
-    }
-
-
-    if (!date) {
-
-        showMessage(
-            "Please select a due date.",
-            "error"
-        );
-
-        return;
-
-    }
-
-
-    if (editingReminderId) {
-
-        const reminder =
-            reminders.find(
-                r =>
-                    r.id ===
-                    editingReminderId
-            );
-
-
-        if (reminder) {
-
-            reminder.title =
-                title;
-
-            reminder.amount =
-                amount;
-
-            reminder.date =
-                date;
-
-            reminder.note =
-                note;
-
-        }
-
-
-        showMessage(
-            "Reminder updated successfully."
-        );
-
-    }
-
-
-    else {
-
-        reminders.push({
-
-            id:
-                generateId(),
-
-            title:
-                title,
-
-            amount:
-                amount,
-
-            date:
-                date,
-
-            note:
-                note,
-
-            completed:
-                false
-
-        });
-
-
-        showMessage(
-            "Reminder added successfully."
-        );
-
-    }
-
-
-    saveReminders();
-
-
-    closeReminderModal();
-
-
-    updateEverything();
-
-}
-
-
-/* =========================================================
-   REMINDER TABS
-========================================================= */
-
-function setupReminderTabs() {
-
-    const tabs =
-        document.querySelectorAll(
-            ".reminder-tab"
-        );
-
-
-    tabs.forEach(
-        function (tab) {
-
-            tab.addEventListener(
-                "click",
-                function () {
-
-                    tabs.forEach(
-                        t =>
-                            t.classList.remove(
-                                "active"
-                            )
-                    );
-
-
-                    this.classList.add(
-                        "active"
-                    );
-
-
-                    reminderFilter =
-                        this.dataset.filter ||
-                        "all";
-
-
-                    renderReminders();
-
-                }
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   REMINDER STATUS
-========================================================= */
-
-function isReminderToday(
-    reminder
-) {
-
-    return (
-        !reminder.completed &&
-        reminder.date ===
-        getToday()
-    );
-
-}
-
-
-function isReminderOverdue(
-    reminder
-) {
-
-    return (
-        !reminder.completed &&
-        reminder.date <
-        getToday()
-    );
-
-}
-
-
-function isReminderUpcoming(
-    reminder
-) {
-
-    return (
-        !reminder.completed &&
-        reminder.date >
-        getToday()
-    );
-
-}
-
-
-/* =========================================================
-   RENDER REMINDERS
-========================================================= */
-
-function renderReminders() {
-
-    const list =
-        document.getElementById(
-            "reminderList"
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    let filtered =
-        [...reminders];
-
-
-    switch (
-        reminderFilter
+    if (
+        transaction.type === "income" ||
+        transaction.type === "borrowed" ||
+        transaction.type === "repayment_received"
     ) {
 
-        case "today":
-
-            filtered =
-                filtered.filter(
-                    isReminderToday
-                );
-
-            break;
-
-
-        case "upcoming":
-
-            filtered =
-                filtered.filter(
-                    isReminderUpcoming
-                );
-
-            break;
-
-
-        case "overdue":
-
-            filtered =
-                filtered.filter(
-                    isReminderOverdue
-                );
-
-            break;
+        return "+ " + formatMoney(amount);
 
     }
 
 
-    filtered.sort(
+    if (
+        transaction.type === "expense" ||
+        transaction.type === "lent" ||
+        transaction.type === "repayment_paid"
+    ) {
+
+        return "- " + formatMoney(amount);
+
+    }
+
+
+    if (
+        transaction.type === "adjustment"
+    ) {
+
+        if (
+            transaction.adjustmentDirection ===
+            "decrease"
+        ) {
+
+            return "- " + formatMoney(amount);
+
+        }
+
+        return "+ " + formatMoney(amount);
+
+    }
+
+
+    return formatMoney(amount);
+
+}
+
+
+function sortTransactions(list) {
+
+    return [...list].sort(
         function (a, b) {
 
-            return (
-                new Date(a.date) -
-                new Date(b.date)
+            const dateA =
+                new Date(
+                    (a.date || "") +
+                    "T00:00:00"
+                ).getTime();
+
+            const dateB =
+                new Date(
+                    (b.date || "") +
+                    "T00:00:00"
+                ).getTime();
+
+
+            if (dateB !== dateA) {
+                return dateB - dateA;
+            }
+
+
+            return String(
+                b.createdAt || ""
+            ).localeCompare(
+                String(a.createdAt || "")
             );
 
         }
     );
 
-
-    if (
-        filtered.length ===
-        0
-    ) {
-
-        list.innerHTML =
-            emptyStateHTML(
-                "fa-bell",
-                "No reminders",
-                "Create a reminder to stay on track."
-            );
-
-        return;
-
-    }
-
-
-    list.innerHTML =
-        filtered
-            .map(
-                createReminderHTML
-            )
-            .join("");
-
 }
 
 
-/* =========================================================
-   REMINDER HTML
-========================================================= */
+/* ================= TRANSACTION HTML ================= */
 
-function createReminderHTML(
-    reminder
+function createTransactionHTML(
+    transaction
 ) {
 
-    let status =
-        "Upcoming";
-
-    let className =
-        "upcoming";
+    const icon =
+        getTransactionIcon(transaction);
 
 
-    if (
-        reminder.completed
-    ) {
+    const label =
+        getTransactionLabel(transaction);
 
-        status =
-            "Completed";
 
-        className =
-            "completed";
-
-    }
-
-    else if (
-        isReminderToday(
-            reminder
-        )
-    ) {
-
-        status =
-            "Due Today";
-
-        className =
-            "due";
-
-    }
-
-    else if (
-        isReminderOverdue(
-            reminder
-        )
-    ) {
-
-        status =
-            "Overdue";
-
-        className =
-            "due";
-
-    }
+    const personText =
+        transaction.person
+            ? " • " + escapeHTML(transaction.person)
+            : "";
 
 
     return `
 
-        <div class="reminder-page-card ${className}">
+        <div class="transaction-row">
 
-            <div class="reminder-page-icon">
-
-                <i class="fa-solid fa-bell"></i>
-
+            <div class="transaction-icon">
+                <i class="fa-solid ${icon}"></i>
             </div>
 
-
-            <div class="reminder-page-info">
+            <div class="transaction-info">
 
                 <strong>
                     ${escapeHTML(
-                        reminder.title
+                        transaction.description ||
+                        label
                     )}
                 </strong>
 
                 <span>
-                    ${
-                        reminder.amount > 0
-                            ? formatMoney(
-                                reminder.amount
-                            )
-                            : "No amount"
-                    }
-                </span>
-
-                <small>
-
-                    ${status}
-
+                    ${label}
+                    ${personText}
                     •
-
-                    ${formatDate(
-                        reminder.date
-                    )}
-
-                    ${
-                        reminder.note
-                            ? " • " +
-                              escapeHTML(
-                                  reminder.note
-                              )
-                            : ""
-                    }
-
-                </small>
+                    ${formatDate(transaction.date)}
+                </span>
 
             </div>
 
+            <div class="
+                transaction-amount
+                ${getTransactionAmountClass(transaction)}
+            ">
 
-            <div class="reminder-page-actions">
+                ${getSignedAmount(transaction)}
+
+            </div>
+
+            <div class="transaction-actions">
 
                 <button
-                    class="reminder-action"
-                    onclick="toggleReminder(${reminder.id})"
-                    title="${
-                        reminder.completed
-                            ? "Mark incomplete"
-                            : "Mark completed"
-                    }"
-                >
+                    class="small-action"
+                    title="Edit"
+                    onclick="editTransaction('${transaction.id}')">
 
-                    <i class="fa-solid ${
-                        reminder.completed
-                            ? "fa-rotate-left"
-                            : "fa-check"
-                    }"></i>
+                    <i class="fa-solid fa-pen"></i>
 
                 </button>
 
-
                 <button
-                    class="reminder-action delete"
-                    onclick="deleteReminder(${reminder.id})"
+                    class="small-action"
                     title="Delete"
-                >
+                    onclick="deleteTransaction('${transaction.id}')">
 
                     <i class="fa-solid fa-trash"></i>
 
@@ -4806,133 +1921,31 @@ function createReminderHTML(
 }
 
 
-/* =========================================================
-   TOGGLE REMINDER
-========================================================= */
+/* ================= RECENT ================= */
 
-function toggleReminder(id) {
-
-    const reminder =
-        reminders.find(
-            r =>
-                r.id === id
-        );
-
-
-    if (!reminder) {
-        return;
-    }
-
-
-    reminder.completed =
-        !reminder.completed;
-
-
-    saveReminders();
-
-
-    updateEverything();
-
-
-    showMessage(
-        reminder.completed
-            ? "Reminder completed."
-            : "Reminder reopened."
-    );
-
-}
-
-
-/* =========================================================
-   DELETE REMINDER
-========================================================= */
-
-function deleteReminder(id) {
-
-    const reminder =
-        reminders.find(
-            r =>
-                r.id === id
-        );
-
-
-    if (!reminder) {
-        return;
-    }
-
-
-    if (
-        !confirm(
-            `Delete "${reminder.title}"?`
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    reminders =
-        reminders.filter(
-            r =>
-                r.id !== id
-        );
-
-
-    saveReminders();
-
-
-    updateEverything();
-
-
-    showMessage(
-        "Reminder deleted."
-    );
-
-}
-
-
-/* =========================================================
-   DASHBOARD REMINDERS
-========================================================= */
-
-function renderDashboardReminders() {
+function renderRecentTransactions() {
 
     const container =
         document.getElementById(
-            "dashboardReminders"
+            "recentTransactions"
         );
 
 
-    if (!container) {
-        return;
-    }
+    if (!container) return;
 
 
-    const active =
-        reminders
-            .filter(
-                r =>
-                    !r.completed
-            )
-            .sort(
-                (a, b) =>
-                    new Date(a.date) -
-                    new Date(b.date)
-            )
-            .slice(0, 3);
+    const list =
+        sortTransactions(
+            transactions
+        ).slice(0, 8);
 
 
-    if (
-        active.length ===
-        0
-    ) {
+    if (!list.length) {
 
         container.innerHTML =
             emptyStateHTML(
-                "fa-bell",
-                "No active reminders",
-                "You're all caught up."
+                "fa-receipt",
+                "No transactions yet."
             );
 
         return;
@@ -4941,91 +1954,398 @@ function renderDashboardReminders() {
 
 
     container.innerHTML =
-        active
-            .map(
-                createDashboardReminderHTML
-            )
+        list.map(
+            createTransactionHTML
+        ).join("");
+
+}
+
+
+/* ================= ALL TRANSACTIONS ================= */
+
+function setupTransactionHistoryFilter() {
+
+    const filter =
+        document.getElementById(
+            "transactionHistoryFilter"
+        );
+
+
+    if (!filter) return;
+
+
+    filter.addEventListener(
+        "change",
+        renderAllTransactions
+    );
+
+}
+
+
+function renderAllTransactions() {
+
+    const container =
+        document.getElementById(
+            "allTransactionList"
+        );
+
+
+    if (!container) return;
+
+
+    const filter =
+        document.getElementById(
+            "transactionHistoryFilter"
+        )?.value || "all";
+
+
+    let list =
+        sortTransactions(
+            transactions
+        );
+
+
+    if (filter !== "all") {
+
+        if (filter === "repayment") {
+
+            list =
+                list.filter(
+                    function (transaction) {
+
+                        return (
+                            transaction.type ===
+                                "repayment_received" ||
+                            transaction.type ===
+                                "repayment_paid"
+                        );
+
+                    }
+                );
+
+        } else {
+
+            list =
+                list.filter(
+                    function (transaction) {
+
+                        return transaction.type ===
+                            filter;
+
+                    }
+                );
+
+        }
+
+    }
+
+
+    if (!list.length) {
+
+        container.innerHTML =
+            emptyStateHTML(
+                "fa-receipt",
+                "No transactions found."
+            );
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        list.map(
+            createTransactionHTML
+        ).join("");
+
+}
+
+
+/* ================= EXPENSES ================= */
+
+function setupExpenseFilters() {
+
+    [
+        "expenseSearch",
+        "expenseCategory",
+        "expenseDateFilter"
+    ].forEach(function (id) {
+
+        const element =
+            document.getElementById(id);
+
+        if (!element) return;
+
+        element.addEventListener(
+            "input",
+            renderExpenses
+        );
+
+        element.addEventListener(
+            "change",
+            renderExpenses
+        );
+
+    });
+
+}
+
+
+function clearExpenseFilters() {
+
+    document.getElementById(
+        "expenseSearch"
+    ).value = "";
+
+    document.getElementById(
+        "expenseCategory"
+    ).value = "all";
+
+    document.getElementById(
+        "expenseDateFilter"
+    ).value = "";
+
+    renderExpenses();
+
+}
+
+
+function renderExpenses() {
+
+    const listContainer =
+        document.getElementById(
+            "expenseList"
+        );
+
+
+    if (!listContainer) return;
+
+
+    const allExpenses =
+        transactions.filter(
+            function (transaction) {
+
+                return transaction.type ===
+                    "expense";
+
+            }
+        );
+
+
+    const total =
+        allExpenses.reduce(
+            function (sum, transaction) {
+
+                return sum +
+                    Number(transaction.amount || 0);
+
+            },
+            0
+        );
+
+
+    const currentMonth =
+        getToday().substring(0, 7);
+
+
+    const monthTotal =
+        allExpenses
+            .filter(function (transaction) {
+
+                return (
+                    transaction.date || ""
+                ).startsWith(
+                    currentMonth
+                );
+
+            })
+            .reduce(
+                function (sum, transaction) {
+
+                    return sum +
+                        Number(transaction.amount || 0);
+
+                },
+                0
+            );
+
+
+    setText(
+        "expensePageTotal",
+        formatMoney(total)
+    );
+
+
+    setText(
+        "expenseMonthTotal",
+        formatMoney(monthTotal)
+    );
+
+
+    const search =
+        (
+            document.getElementById(
+                "expenseSearch"
+            )?.value || ""
+        ).toLowerCase().trim();
+
+
+    const category =
+        document.getElementById(
+            "expenseCategory"
+        )?.value || "all";
+
+
+    const date =
+        document.getElementById(
+            "expenseDateFilter"
+        )?.value || "";
+
+
+    const filtered =
+        allExpenses.filter(
+            function (transaction) {
+
+                const matchesSearch =
+                    !search ||
+                    String(
+                        transaction.description || ""
+                    )
+                    .toLowerCase()
+                    .includes(search);
+
+
+                const matchesCategory =
+                    category === "all" ||
+                    transaction.category === category;
+
+
+                const matchesDate =
+                    !date ||
+                    transaction.date === date;
+
+
+                return (
+                    matchesSearch &&
+                    matchesCategory &&
+                    matchesDate
+                );
+
+            }
+        );
+
+
+    setText(
+        "expenseTransactionCount",
+        String(filtered.length)
+    );
+
+
+    if (!filtered.length) {
+
+        listContainer.innerHTML =
+            emptyStateHTML(
+                "fa-receipt",
+                "No expenses found."
+            );
+
+        return;
+
+    }
+
+
+    listContainer.innerHTML =
+        sortTransactions(filtered)
+            .map(createExpenseHTML)
             .join("");
 
 }
 
 
-function createDashboardReminderHTML(
-    reminder
-) {
+function getCategoryIcon(category) {
 
-    let label =
-        "Due " +
-        formatShortDate(
-            reminder.date
-        );
+    const icons = {
+
+        food: "fa-utensils",
+        fuel: "fa-gas-pump",
+        shopping: "fa-bag-shopping",
+        bills: "fa-file-invoice-dollar",
+        transport: "fa-car",
+        health: "fa-heart-pulse",
+        entertainment: "fa-film",
+        other: "fa-receipt"
+
+    };
+
+    return icons[category] ||
+        icons.other;
+
+}
 
 
-    let className =
-        "upcoming";
-
-
-    if (
-        isReminderToday(
-            reminder
-        )
-    ) {
-
-        label =
-            "Due Today";
-
-        className =
-            "urgent";
-
-    }
-
-    else if (
-        isReminderOverdue(
-            reminder
-        )
-    ) {
-
-        label =
-            "Overdue";
-
-        className =
-            "urgent";
-
-    }
-
+function createExpenseHTML(transaction) {
 
     return `
 
-        <div class="reminder ${className}">
+        <div class="expense-row">
 
-            <div class="reminder-icon">
+            <div class="expense-icon">
 
-                <i class="fa-solid fa-bell"></i>
+                <i class="fa-solid ${
+                    getCategoryIcon(
+                        transaction.category
+                    )
+                }"></i>
 
             </div>
 
 
-            <div class="reminder-info">
+            <div class="expense-info">
 
                 <strong>
                     ${escapeHTML(
-                        reminder.title
+                        transaction.description
                     )}
                 </strong>
 
                 <span>
                     ${
-                        reminder.amount > 0
-                            ? formatMoney(
-                                reminder.amount
-                            )
-                            : "No amount"
+                        escapeHTML(
+                            transaction.category ||
+                            "other"
+                        )
                     }
+                    •
+                    ${formatDate(transaction.date)}
                 </span>
 
-                <small>
-                    ${label}
-                </small>
+            </div>
+
+
+            <div class="expense-amount">
+
+                - ${formatMoney(transaction.amount)}
+
+            </div>
+
+
+            <div class="transaction-actions">
+
+                <button
+                    class="small-action"
+                    onclick="editTransaction('${transaction.id}')">
+
+                    <i class="fa-solid fa-pen"></i>
+
+                </button>
+
+                <button
+                    class="small-action"
+                    onclick="deleteTransaction('${transaction.id}')">
+
+                    <i class="fa-solid fa-trash"></i>
+
+                </button>
 
             </div>
 
@@ -5036,57 +2356,2007 @@ function createDashboardReminderHTML(
 }
 
 
-/* =========================================================
-   REMINDER COUNT
-========================================================= */
+/* ================= FRIENDS ================= */
+
+function openFriendModal(friendId = null) {
+
+    editingFriendId = friendId;
+
+
+    const modal =
+        document.getElementById(
+            "friendModal"
+        );
+
+
+    if (friendId) {
+
+        const friend =
+            friends.find(
+                function (item) {
+
+                    return item.id === friendId;
+
+                }
+            );
+
+
+        if (!friend) return;
+
+
+        document.getElementById(
+            "friendName"
+        ).value =
+            friend.name || "";
+
+
+        document.getElementById(
+            "friendPhone"
+        ).value =
+            friend.phone || "";
+
+
+        document.getElementById(
+            "friendNote"
+        ).value =
+            friend.note || "";
+
+
+        setText(
+            "friendModalTitle",
+            "Edit Friend"
+        );
+
+    } else {
+
+        document.getElementById(
+            "friendName"
+        ).value = "";
+
+        document.getElementById(
+            "friendPhone"
+        ).value = "";
+
+        document.getElementById(
+            "friendNote"
+        ).value = "";
+
+
+        setText(
+            "friendModalTitle",
+            "Add Friend"
+        );
+
+    }
+
+
+    modal.classList.add("show");
+
+}
+
+
+function closeFriendModal() {
+
+    document
+        .getElementById("friendModal")
+        .classList.remove("show");
+
+    editingFriendId = null;
+
+}
+
+
+function saveFriend(event) {
+
+    event.preventDefault();
+
+
+    const name =
+        document.getElementById(
+            "friendName"
+        ).value.trim();
+
+
+    const phone =
+        document.getElementById(
+            "friendPhone"
+        ).value.trim();
+
+
+    const note =
+        document.getElementById(
+            "friendNote"
+        ).value.trim();
+
+
+    if (!name) {
+
+        showMessage(
+            "Please enter the friend's name.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    if (editingFriendId) {
+
+        const friend =
+            friends.find(
+                function (item) {
+
+                    return item.id ===
+                        editingFriendId;
+
+                }
+            );
+
+
+        if (friend) {
+
+            const oldName =
+                friend.name;
+
+
+            friend.name = name;
+            friend.phone = phone;
+            friend.note = note;
+
+
+            /*
+                If friend name changes,
+                update related transaction names.
+            */
+
+            transactions.forEach(
+                function (transaction) {
+
+                    if (
+                        normalizePerson(
+                            transaction.person
+                        ) ===
+                        normalizePerson(oldName)
+                    ) {
+
+                        transaction.person =
+                            name;
+
+                    }
+
+                }
+            );
+
+
+            saveTransactions();
+
+        }
+
+
+        showMessage(
+            "Friend updated successfully.",
+            "success"
+        );
+
+    } else {
+
+        friends.push({
+
+            id: generateId("friend_"),
+
+            name: name,
+
+            phone: phone,
+
+            note: note,
+
+            createdAt:
+                new Date().toISOString()
+
+        });
+
+
+        showMessage(
+            "Friend added successfully.",
+            "success"
+        );
+
+    }
+
+
+    saveFriends();
+
+    closeFriendModal();
+
+    updateEverything();
+
+}
+
+
+function deleteFriend(id) {
+
+    const friend =
+        friends.find(
+            function (item) {
+
+                return item.id === id;
+
+            }
+        );
+
+
+    if (!friend) return;
+
+
+    const confirmed = confirm(
+        "Delete " +
+        friend.name +
+        " from your friends list?\n\n" +
+        "Their transactions will NOT be deleted."
+    );
+
+
+    if (!confirmed) return;
+
+
+    friends =
+        friends.filter(
+            function (item) {
+
+                return item.id !== id;
+
+            }
+        );
+
+
+    saveFriends();
+
+    renderFriends();
+
+
+    showMessage(
+        "Friend deleted.",
+        "success"
+    );
+
+}
+
+
+function renderFriends() {
+
+    const container =
+        document.getElementById(
+            "friendsList"
+        );
+
+
+    if (!container) return;
+
+
+    setText(
+        "friendsCount",
+        String(friends.length)
+    );
+
+
+    let totalOwed = 0;
+    let active = 0;
+
+
+    friends.forEach(function (friend) {
+
+        const balance =
+            getPersonBalances(
+                friend.name
+            );
+
+
+        totalOwed += balance.owesYou;
+
+
+        if (
+            balance.owesYou > 0 ||
+            balance.youOwe > 0
+        ) {
+            active++;
+        }
+
+    });
+
+
+    setText(
+        "friendsTotalOwed",
+        formatMoney(totalOwed)
+    );
+
+
+    setText(
+        "friendsActiveCount",
+        String(active)
+    );
+
+
+    if (!friends.length) {
+
+        container.innerHTML =
+            emptyStateHTML(
+                "fa-user-group",
+                "No friends added yet."
+            );
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        friends.map(
+            createFriendHTML
+        ).join("");
+
+}
+
+
+function createFriendHTML(friend) {
+
+    const balance =
+        getPersonBalances(
+            friend.name
+        );
+
+
+    return `
+
+        <div class="person-card">
+
+            <div class="person-header">
+
+                <div class="person-title">
+
+                    <div class="person-avatar">
+
+                        ${getInitials(friend.name)}
+
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            ${escapeHTML(friend.name)}
+                        </strong>
+
+                        <small>
+                            ${
+                                escapeHTML(
+                                    friend.phone ||
+                                    "No phone added"
+                                )
+                            }
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="person-actions">
+
+                    <button
+                        class="small-action"
+                        onclick="editFriend('${friend.id}')">
+
+                        <i class="fa-solid fa-pen"></i>
+
+                    </button>
+
+                    <button
+                        class="small-action"
+                        onclick="deleteFriend('${friend.id}')">
+
+                        <i class="fa-solid fa-trash"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="person-balances">
+
+                <div class="person-balance">
+
+                    <span>They Owe You</span>
+
+                    <strong class="owe-you">
+                        ${formatMoney(balance.owesYou)}
+                    </strong>
+
+                </div>
+
+
+                <div class="person-balance">
+
+                    <span>You Owe Them</span>
+
+                    <strong class="you-owe">
+                        ${formatMoney(balance.youOwe)}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            ${
+                friend.note
+                    ? `
+                        <p class="muted"
+                           style="margin-bottom:15px;">
+                            ${escapeHTML(friend.note)}
+                        </p>
+                    `
+                    : ""
+            }
+
+
+            <div class="person-footer">
+
+                <button
+                    class="secondary-btn"
+                    onclick="openRepaymentModal('${escapeAttribute(friend.name)}')">
+
+                    <i class="fa-solid fa-rotate"></i>
+
+                    Repayment
+
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+function editFriend(id) {
+
+    openFriendModal(id);
+
+}
+
+
+/* ================= DEBTS ================= */
+
+function openDebtModal(transactionId = null) {
+
+    editingDebtId = transactionId;
+
+
+    const modal =
+        document.getElementById(
+            "debtModal"
+        );
+
+
+    if (transactionId) {
+
+        const debt =
+            transactions.find(
+                function (item) {
+
+                    return item.id ===
+                        transactionId &&
+                        item.type === "borrowed";
+
+                }
+            );
+
+
+        if (!debt) return;
+
+
+        document.getElementById(
+            "debtPerson"
+        ).value =
+            debt.person || "";
+
+
+        document.getElementById(
+            "debtAmount"
+        ).value =
+            debt.amount;
+
+
+        document.getElementById(
+            "debtDate"
+        ).value =
+            debt.date || getToday();
+
+
+        document.getElementById(
+            "debtDueDate"
+        ).value =
+            debt.dueDate || "";
+
+
+        document.getElementById(
+            "debtNote"
+        ).value =
+            debt.note || debt.description || "";
+
+
+        setText(
+            "debtModalTitle",
+            "Edit Debt"
+        );
+
+    } else {
+
+        document.getElementById(
+            "debtPerson"
+        ).value = "";
+
+        document.getElementById(
+            "debtAmount"
+        ).value = "";
+
+        document.getElementById(
+            "debtDate"
+        ).value = getToday();
+
+        document.getElementById(
+            "debtDueDate"
+        ).value = "";
+
+        document.getElementById(
+            "debtNote"
+        ).value = "";
+
+
+        setText(
+            "debtModalTitle",
+            "Add Debt"
+        );
+
+    }
+
+
+    modal.classList.add("show");
+
+}
+
+
+function closeDebtModal() {
+
+    document
+        .getElementById("debtModal")
+        .classList.remove("show");
+
+    editingDebtId = null;
+
+}
+
+
+function saveDebt(event) {
+
+    event.preventDefault();
+
+
+    const person =
+        document.getElementById(
+            "debtPerson"
+        ).value.trim();
+
+
+    const amount = Number(
+        document.getElementById(
+            "debtAmount"
+        ).value
+    );
+
+
+    const date =
+        document.getElementById(
+            "debtDate"
+        ).value;
+
+
+    const dueDate =
+        document.getElementById(
+            "debtDueDate"
+        ).value;
+
+
+    const note =
+        document.getElementById(
+            "debtNote"
+        ).value.trim();
+
+
+    if (!person || !amount || amount <= 0) {
+
+        showMessage(
+            "Please enter a valid person and amount.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const data = {
+
+        type: "borrowed",
+
+        amount: amount,
+
+        person: person,
+
+        date: date || getToday(),
+
+        dueDate: dueDate,
+
+        note: note,
+
+        description:
+            note ||
+            "Money borrowed from " +
+            person,
+
+        category: "other",
+
+        updatedAt:
+            new Date().toISOString()
+
+    };
+
+
+    if (editingDebtId) {
+
+        const index =
+            transactions.findIndex(
+                function (item) {
+
+                    return item.id ===
+                        editingDebtId;
+
+                }
+            );
+
+
+        if (index !== -1) {
+
+            transactions[index] = {
+
+                ...transactions[index],
+
+                ...data
+
+            };
+
+        }
+
+
+        showMessage(
+            "Debt updated successfully.",
+            "success"
+        );
+
+    } else {
+
+        transactions.push({
+
+            id: generateId("debt_"),
+
+            ...data,
+
+            createdAt:
+                new Date().toISOString()
+
+        });
+
+
+        showMessage(
+            "Debt added successfully.",
+            "success"
+        );
+
+    }
+
+
+    saveTransactions();
+
+    closeDebtModal();
+
+    updateEverything();
+
+}
+
+
+function deleteDebt(id) {
+
+    deleteTransaction(id);
+
+}
+
+
+function getDebtGroups() {
+
+    const groups = {};
+
+
+    transactions
+        .filter(function (transaction) {
+
+            return transaction.type ===
+                "borrowed";
+
+        })
+        .forEach(function (transaction) {
+
+            const key =
+                normalizePerson(
+                    transaction.person
+                );
+
+
+            if (!groups[key]) {
+
+                groups[key] = {
+
+                    name:
+                        transaction.person ||
+                        "Unknown",
+
+                    borrowed: 0,
+
+                    repayments: 0,
+
+                    transactions: []
+
+                };
+
+            }
+
+
+            groups[key].borrowed +=
+                Number(transaction.amount || 0);
+
+
+            groups[key].transactions.push(
+                transaction
+            );
+
+        });
+
+
+    transactions
+        .filter(function (transaction) {
+
+            return (
+                transaction.type ===
+                    "repayment_paid" &&
+                transaction.person
+            );
+
+        })
+        .forEach(function (transaction) {
+
+            const key =
+                normalizePerson(
+                    transaction.person
+                );
+
+
+            if (groups[key]) {
+
+                groups[key].repayments +=
+                    Number(transaction.amount || 0);
+
+            }
+
+        });
+
+
+    return Object.values(groups);
+
+}
+
+
+function renderDebts() {
+
+    const container =
+        document.getElementById(
+            "debtsList"
+        );
+
+
+    if (!container) return;
+
+
+    const groups =
+        getDebtGroups();
+
+
+    let totalBorrowed = 0;
+    let remaining = 0;
+    let active = 0;
+
+
+    groups.forEach(function (group) {
+
+        const left =
+            Math.max(
+                0,
+                group.borrowed -
+                group.repayments
+            );
+
+
+        totalBorrowed +=
+            group.borrowed;
+
+
+        remaining += left;
+
+
+        if (left > 0) {
+            active++;
+        }
+
+    });
+
+
+    setText(
+        "debtsTotal",
+        formatMoney(totalBorrowed)
+    );
+
+
+    setText(
+        "debtsRemaining",
+        formatMoney(remaining)
+    );
+
+
+    setText(
+        "debtsActiveCount",
+        String(active)
+    );
+
+
+    if (!groups.length) {
+
+        container.innerHTML =
+            emptyStateHTML(
+                "fa-credit-card",
+                "No debts recorded."
+            );
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        groups.map(
+            createDebtHTML
+        ).join("");
+
+}
+
+
+function createDebtHTML(group) {
+
+    const remaining =
+        Math.max(
+            0,
+            group.borrowed -
+            group.repayments
+        );
+
+
+    const sortedRecords =
+        sortTransactions(
+            group.transactions
+        );
+
+
+    return `
+
+        <div class="person-card">
+
+            <div class="person-header">
+
+                <div class="person-title">
+
+                    <div class="person-avatar">
+                        ${getInitials(group.name)}
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            ${escapeHTML(group.name)}
+                        </strong>
+
+                        <small>
+                            ${group.transactions.length}
+                            debt record(s)
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="debt-summary"
+                 style="margin-top:15px;">
+
+                <div>
+                    <span>Total Borrowed</span>
+                    <strong>
+                        ${formatMoney(group.borrowed)}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Remaining</span>
+                    <strong>
+                        ${formatMoney(remaining)}
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <div class="debt-records">
+
+                ${
+                    sortedRecords.map(
+                        function (transaction) {
+
+                            return `
+
+                                <div class="debt-record">
+
+                                    <div class="debt-record-top">
+
+                                        <div>
+                                            <strong>
+                                                ${formatMoney(
+                                                    transaction.amount
+                                                )}
+                                            </strong>
+
+                                            <span>
+                                                ${formatDate(
+                                                    transaction.date
+                                                )}
+                                            </span>
+                                        </div>
+
+
+                                        ${
+                                            transaction.dueDate
+                                                ? `
+                                                    <span>
+                                                        Due:
+                                                        ${formatShortDate(
+                                                            transaction.dueDate
+                                                        )}
+                                                    </span>
+                                                `
+                                                : ""
+                                        }
+
+                                    </div>
+
+
+                                    ${
+                                        transaction.note
+                                            ? `
+                                                <span style="
+                                                    display:block;
+                                                    margin-top:6px;
+                                                ">
+                                                    ${escapeHTML(
+                                                        transaction.note
+                                                    )}
+                                                </span>
+                                            `
+                                            : ""
+                                    }
+
+
+                                    <div class="debt-record-actions">
+
+                                        <button
+                                            class="small-action"
+                                            onclick="openDebtModal('${transaction.id}')">
+
+                                            <i class="fa-solid fa-pen"></i>
+
+                                        </button>
+
+                                        <button
+                                            class="small-action"
+                                            onclick="deleteDebt('${transaction.id}')">
+
+                                            <i class="fa-solid fa-trash"></i>
+
+                                        </button>
+
+                                    </div>
+
+                                </div>
+
+                            `;
+
+                        }
+                    ).join("")
+                }
+
+            </div>
+
+
+            <div class="person-footer"
+                 style="margin-top:15px;">
+
+                <button
+                    class="secondary-btn"
+                    onclick="openRepaymentModal('${escapeAttribute(group.name)}')">
+
+                    <i class="fa-solid fa-rotate"></i>
+
+                    Record Repayment
+
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* ================= REPORTS ================= */
+
+function renderReports() {
+
+    const totals =
+        getTotals();
+
+
+    setText(
+        "reportIncome",
+        formatMoney(totals.income)
+    );
+
+
+    setText(
+        "reportExpenses",
+        formatMoney(totals.expenses)
+    );
+
+
+    setText(
+        "reportLent",
+        formatMoney(totals.lent)
+    );
+
+
+    setText(
+        "reportBorrowed",
+        formatMoney(totals.borrowed)
+    );
+
+
+    setText(
+        "reportAdjustments",
+        formatMoney(totals.adjustmentNet)
+    );
+
+
+    renderMonthlyReport();
+
+    renderCategoryReport();
+
+}
+
+
+function renderMonthlyReport() {
+
+    const container =
+        document.getElementById(
+            "monthlyReport"
+        );
+
+
+    if (!container) return;
+
+
+    const months = {};
+
+
+    transactions.forEach(function (transaction) {
+
+        const month =
+            String(
+                transaction.date || ""
+            ).substring(0, 7);
+
+
+        if (!month) return;
+
+
+        if (!months[month]) {
+
+            months[month] = {
+
+                income: 0,
+                expense: 0,
+                lent: 0,
+                borrowed: 0,
+                received: 0,
+                paid: 0,
+                adjustment: 0
+
+            };
+
+        }
+
+
+        const amount =
+            Number(transaction.amount || 0);
+
+
+        switch (transaction.type) {
+
+            case "income":
+                months[month].income += amount;
+                break;
+
+            case "expense":
+                months[month].expense += amount;
+                break;
+
+            case "lent":
+                months[month].lent += amount;
+                break;
+
+            case "borrowed":
+                months[month].borrowed += amount;
+                break;
+
+            case "repayment_received":
+                months[month].received += amount;
+                break;
+
+            case "repayment_paid":
+                months[month].paid += amount;
+                break;
+
+            case "adjustment":
+
+                months[month].adjustment +=
+                    transaction.adjustmentDirection ===
+                    "decrease"
+                        ? -amount
+                        : amount;
+
+                break;
+
+        }
+
+    });
+
+
+    const entries =
+        Object.entries(months)
+            .sort(function (a, b) {
+
+                return b[0].localeCompare(a[0]);
+
+            });
+
+
+    if (!entries.length) {
+
+        container.innerHTML =
+            emptyStateHTML(
+                "fa-chart-line",
+                "No report data yet."
+            );
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        entries.map(function ([month, data]) {
+
+            const net =
+                data.income +
+                data.borrowed +
+                data.received +
+                data.adjustment -
+                data.expense -
+                data.lent -
+                data.paid;
+
+
+            const date =
+                new Date(
+                    month + "-01T00:00:00"
+                );
+
+
+            const monthName =
+                date.toLocaleDateString(
+                    "en-US",
+                    {
+                        month: "long",
+                        year: "numeric"
+                    }
+                );
+
+
+            return `
+
+                <div class="month-row">
+
+                    <div class="month-row-top">
+
+                        <strong>
+                            ${monthName}
+                        </strong>
+
+                        <strong class="${
+                            net >= 0
+                                ? "amount-positive"
+                                : "amount-negative"
+                        }">
+
+                            ${
+                                net >= 0
+                                    ? "+ "
+                                    : "- "
+                            }
+
+                            ${formatMoney(Math.abs(net))}
+
+                        </strong>
+
+                    </div>
+
+                    <span>
+                        Income:
+                        ${formatMoney(data.income)}
+                        •
+                        Expenses:
+                        ${formatMoney(data.expense)}
+                    </span>
+
+                    <span>
+                        Lent:
+                        ${formatMoney(data.lent)}
+                        •
+                        Borrowed:
+                        ${formatMoney(data.borrowed)}
+                    </span>
+
+                </div>
+
+            `;
+
+        }).join("");
+
+}
+
+
+function renderCategoryReport() {
+
+    const container =
+        document.getElementById(
+            "categoryReport"
+        );
+
+
+    if (!container) return;
+
+
+    const categories = {};
+
+
+    transactions
+        .filter(function (transaction) {
+
+            return transaction.type ===
+                "expense";
+
+        })
+        .forEach(function (transaction) {
+
+            const category =
+                transaction.category ||
+                "other";
+
+
+            categories[category] =
+                (
+                    categories[category] || 0
+                ) +
+                Number(transaction.amount || 0);
+
+        });
+
+
+    const entries =
+        Object.entries(categories)
+            .sort(function (a, b) {
+
+                return b[1] - a[1];
+
+            });
+
+
+    if (!entries.length) {
+
+        container.innerHTML =
+            emptyStateHTML(
+                "fa-chart-pie",
+                "No expense categories yet."
+            );
+
+        return;
+
+    }
+
+
+    const max =
+        entries[0][1];
+
+
+    container.innerHTML =
+        entries.map(function ([category, amount]) {
+
+            const percentage =
+                max > 0
+                    ? (amount / max) * 100
+                    : 0;
+
+
+            return `
+
+                <div class="category-row">
+
+                    <div class="category-row-top">
+
+                        <strong>
+                            ${escapeHTML(
+                                capitalize(category)
+                            )}
+                        </strong>
+
+                        <span>
+                            ${formatMoney(amount)}
+                        </span>
+
+                    </div>
+
+
+                    <div class="category-bar">
+
+                        <div style="
+                            width:${percentage}%;
+                        "></div>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }).join("");
+
+}
+
+
+/* ================= REMINDERS ================= */
+
+function setupReminderTabs() {
+
+    document
+        .querySelectorAll(".reminder-tab")
+        .forEach(function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    reminderFilter =
+                        button.dataset.filter;
+
+
+                    document
+                        .querySelectorAll(
+                            ".reminder-tab"
+                        )
+                        .forEach(function (item) {
+
+                            item.classList.remove(
+                                "active"
+                            );
+
+                        });
+
+
+                    button.classList.add(
+                        "active"
+                    );
+
+
+                    renderReminders();
+
+                }
+            );
+
+        });
+
+}
+
+
+function openReminderModal(reminderId = null) {
+
+    editingReminderId = reminderId;
+
+
+    const modal =
+        document.getElementById(
+            "reminderModal"
+        );
+
+
+    if (reminderId) {
+
+        const reminder =
+            reminders.find(
+                function (item) {
+
+                    return item.id ===
+                        reminderId;
+
+                }
+            );
+
+
+        if (!reminder) return;
+
+
+        document.getElementById(
+            "reminderTitle"
+        ).value =
+            reminder.title || "";
+
+
+        document.getElementById(
+            "reminderAmount"
+        ).value =
+            reminder.amount || "";
+
+
+        document.getElementById(
+            "reminderDate"
+        ).value =
+            reminder.date || getToday();
+
+
+        document.getElementById(
+            "reminderNote"
+        ).value =
+            reminder.note || "";
+
+
+        setText(
+            "reminderModalTitle",
+            "Edit Reminder"
+        );
+
+
+        setText(
+            "reminderSubmitText",
+            "Update Reminder"
+        );
+
+    } else {
+
+        document.getElementById(
+            "reminderTitle"
+        ).value = "";
+
+        document.getElementById(
+            "reminderAmount"
+        ).value = "";
+
+        document.getElementById(
+            "reminderDate"
+        ).value = getToday();
+
+        document.getElementById(
+            "reminderNote"
+        ).value = "";
+
+
+        setText(
+            "reminderModalTitle",
+            "Add Reminder"
+        );
+
+
+        setText(
+            "reminderSubmitText",
+            "Save Reminder"
+        );
+
+    }
+
+
+    modal.classList.add("show");
+
+}
+
+
+function closeReminderModal() {
+
+    document
+        .getElementById("reminderModal")
+        .classList.remove("show");
+
+    editingReminderId = null;
+
+}
+
+
+function saveReminder(event) {
+
+    event.preventDefault();
+
+
+    const title =
+        document.getElementById(
+            "reminderTitle"
+        ).value.trim();
+
+
+    const amount = Number(
+        document.getElementById(
+            "reminderAmount"
+        ).value || 0
+    );
+
+
+    const date =
+        document.getElementById(
+            "reminderDate"
+        ).value;
+
+
+    const note =
+        document.getElementById(
+            "reminderNote"
+        ).value.trim();
+
+
+    if (!title || !date) {
+
+        showMessage(
+            "Please enter a title and date.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    if (editingReminderId) {
+
+        const reminder =
+            reminders.find(
+                function (item) {
+
+                    return item.id ===
+                        editingReminderId;
+
+                }
+            );
+
+
+        if (reminder) {
+
+            reminder.title = title;
+            reminder.amount = amount;
+            reminder.date = date;
+            reminder.note = note;
+            reminder.updatedAt =
+                new Date().toISOString();
+
+        }
+
+
+        showMessage(
+            "Reminder updated successfully.",
+            "success"
+        );
+
+    } else {
+
+        reminders.push({
+
+            id: generateId("rem_"),
+
+            title: title,
+
+            amount: amount,
+
+            date: date,
+
+            note: note,
+
+            completed: false,
+
+            createdAt:
+                new Date().toISOString()
+
+        });
+
+
+        showMessage(
+            "Reminder added successfully.",
+            "success"
+        );
+
+    }
+
+
+    saveReminders();
+
+    closeReminderModal();
+
+    updateEverything();
+
+}
+
+
+function getReminderStatus(reminder) {
+
+    const today = getToday();
+
+
+    if (reminder.completed) {
+        return "completed";
+    }
+
+
+    if (reminder.date < today) {
+        return "overdue";
+    }
+
+
+    if (reminder.date === today) {
+        return "today";
+    }
+
+
+    return "upcoming";
+
+}
+
+
+function renderReminders() {
+
+    const container =
+        document.getElementById(
+            "reminderList"
+        );
+
+
+    if (!container) return;
+
+
+    let list =
+        [...reminders];
+
+
+    if (reminderFilter !== "all") {
+
+        list =
+            list.filter(
+                function (reminder) {
+
+                    return (
+                        getReminderStatus(
+                            reminder
+                        ) ===
+                        reminderFilter
+                    );
+
+                }
+            );
+
+    }
+
+
+    list.sort(function (a, b) {
+
+        return a.date.localeCompare(
+            b.date
+        );
+
+    });
+
+
+    if (!list.length) {
+
+        container.innerHTML =
+            emptyStateHTML(
+                "fa-bell",
+                "No reminders found."
+            );
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        list.map(
+            createReminderHTML
+        ).join("");
+
+}
+
+
+function createReminderHTML(reminder) {
+
+    const status =
+        getReminderStatus(reminder);
+
+
+    let statusText =
+        capitalize(status);
+
+
+    if (status === "today") {
+        statusText = "Today";
+    }
+
+
+    return `
+
+        <div class="
+            reminder-page-card
+            ${reminder.completed ? "completed" : ""}
+        ">
+
+            <div class="reminder-main">
+
+                <button
+                    class="reminder-check"
+                    onclick="toggleReminder('${reminder.id}')">
+
+                    <i class="fa-solid ${
+                        reminder.completed
+                            ? "fa-check"
+                            : "fa-bell"
+                    }"></i>
+
+                </button>
+
+
+                <div>
+
+                    <h3>
+                        ${escapeHTML(reminder.title)}
+                    </h3>
+
+                    <p>
+                        ${escapeHTML(
+                            reminder.note || ""
+                        )}
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="reminder-meta">
+
+                <div>
+
+                    <span>
+                        ${statusText}
+                        •
+                        ${formatDate(reminder.date)}
+                    </span>
+
+                    ${
+                        reminder.amount
+                            ? `
+                                <strong>
+                                    ${formatMoney(
+                                        reminder.amount
+                                    )}
+                                </strong>
+                            `
+                            : ""
+                    }
+
+                </div>
+
+
+                <div class="reminder-actions">
+
+                    <button
+                        class="small-action"
+                        onclick="openReminderModal('${reminder.id}')">
+
+                        <i class="fa-solid fa-pen"></i>
+
+                    </button>
+
+
+                    <button
+                        class="small-action"
+                        onclick="deleteReminder('${reminder.id}')">
+
+                        <i class="fa-solid fa-trash"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+function toggleReminder(id) {
+
+    const reminder =
+        reminders.find(
+            function (item) {
+
+                return item.id === id;
+
+            }
+        );
+
+
+    if (!reminder) return;
+
+
+    reminder.completed =
+        !reminder.completed;
+
+
+    saveReminders();
+
+    updateEverything();
+
+}
+
+
+function deleteReminder(id) {
+
+    const reminder =
+        reminders.find(
+            function (item) {
+
+                return item.id === id;
+
+            }
+        );
+
+
+    if (!reminder) return;
+
+
+    if (
+        !confirm(
+            "Delete this reminder?"
+        )
+    ) {
+        return;
+    }
+
+
+    reminders =
+        reminders.filter(
+            function (item) {
+
+                return item.id !== id;
+
+            }
+        );
+
+
+    saveReminders();
+
+    updateEverything();
+
+
+    showMessage(
+        "Reminder deleted.",
+        "success"
+    );
+
+}
+
 
 function updateReminderCount() {
 
-    const count =
+    const activeReminders =
         reminders.filter(
-            function (r) {
+            function (reminder) {
 
                 return (
-                    !r.completed &&
+                    !reminder.completed &&
                     (
-                        isReminderToday(r) ||
-                        isReminderOverdue(r)
+                        getReminderStatus(reminder) ===
+                            "today" ||
+                        getReminderStatus(reminder) ===
+                            "overdue"
                     )
                 );
 
             }
-        ).length;
-
-
-    const elements =
-        document.querySelectorAll(
-            ".notification-count"
         );
 
 
-    elements.forEach(
-        function (element) {
-
-            element.textContent =
-                count;
-
-            element.style.display =
-                count > 0
-                    ? "flex"
-                    : "none";
-
-        }
-    );
+    const count =
+        activeReminders.length;
 
 
-    /*
-       Bell dot
-    */
+    const badge =
+        document.getElementById(
+            "reminderCount"
+        );
+
 
     const dot =
         document.getElementById(
             "notificationDot"
         );
+
+
+    if (badge) {
+
+        badge.textContent =
+            String(count);
+
+        badge.style.display =
+            count > 0
+                ? "grid"
+                : "none";
+
+    }
 
 
     if (dot) {
@@ -5101,310 +4371,113 @@ function updateReminderCount() {
 }
 
 
-/* =========================================================
-   NAVIGATION
-========================================================= */
+function renderDashboardReminders() {
 
-function setupNavigation() {
-
-    const links =
-        document.querySelectorAll(
-            ".menu-item, .mobile-nav-item"
-        );
-
-
-    links.forEach(
-        function (link) {
-
-            link.addEventListener(
-                "click",
-                function (event) {
-
-                    const page =
-                        this.dataset.page;
-
-
-                    if (!page) {
-                        return;
-                    }
-
-
-                    event.preventDefault();
-
-
-                    goToPage(
-                        page
-                    );
-
-                }
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   GO TO PAGE
-========================================================= */
-
-function goToPage(
-    pageName
-) {
-
-    const pageId =
-        pageName.endsWith(
-            "Page"
-        )
-            ? pageName
-            : pageName + "Page";
-
-
-    const pages =
-        document.querySelectorAll(
-            ".page"
-        );
-
-
-    pages.forEach(
-        function (page) {
-
-            page.classList.remove(
-                "active-page"
-            );
-
-        }
-    );
-
-
-    const target =
+    const container =
         document.getElementById(
-            pageId
+            "dashboardReminders"
         );
 
 
-    if (target) {
+    if (!container) return;
 
-        target.classList.add(
-            "active-page"
-        );
 
-    }
+    const list =
+        reminders
+            .filter(function (reminder) {
 
+                return !reminder.completed;
 
-    const navItems =
-        document.querySelectorAll(
-            ".menu-item, .mobile-nav-item"
-        );
+            })
+            .sort(function (a, b) {
 
-
-    navItems.forEach(
-        function (item) {
-
-            item.classList.toggle(
-                "active",
-                item.dataset.page ===
-                pageName
-            );
-
-        }
-    );
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-
-    /*
-       Refresh page-specific content
-    */
-
-    switch (
-        pageName
-    ) {
-
-        case "expenses":
-
-            renderExpenses();
-
-            break;
-
-
-        case "friends":
-
-            renderFriends();
-
-            break;
-
-
-        case "debts":
-
-            renderDebts();
-
-            break;
-
-
-        case "reports":
-
-            renderReports();
-
-            break;
-
-
-        case "reminders":
-
-            renderReminders();
-
-            break;
-
-    }
-
-}
-
-
-/* =========================================================
-   QUICK ACTION HELPERS
-========================================================= */
-
-function quickAdd(
-    type
-) {
-
-    openTransactionModal(
-        type
-    );
-
-}
-
-
-function quickAddFriend() {
-
-    openFriendModal();
-
-}
-
-
-function quickAddDebt() {
-
-    openDebtModal();
-
-}
-
-
-function quickAddReminder() {
-
-    openReminderModal();
-
-}
-
-
-/* =========================================================
-   MODAL OUTSIDE CLICK
-========================================================= */
-
-document.addEventListener(
-    "click",
-    function (event) {
-
-        const modals =
-            document.querySelectorAll(
-                ".modal-overlay"
-            );
-
-
-        modals.forEach(
-            function (modal) {
-
-                if (
-                    event.target ===
-                    modal
-                ) {
-
-                    modal.classList.remove(
-                        "show"
-                    );
-
-                    document.body.classList.remove(
-                        "modal-open"
-                    );
-
-                }
-
-            }
-        );
-
-    }
-);
-
-
-/* =========================================================
-   ESCAPE KEY
-========================================================= */
-
-document.addEventListener(
-    "keydown",
-    function (event) {
-
-        if (
-            event.key !==
-            "Escape"
-        ) {
-
-            return;
-
-        }
-
-
-        const modals =
-            document.querySelectorAll(
-                ".modal-overlay.show"
-            );
-
-
-        modals.forEach(
-            function (modal) {
-
-                modal.classList.remove(
-                    "show"
+                return a.date.localeCompare(
+                    b.date
                 );
 
-            }
-        );
+            })
+            .slice(0, 4);
 
 
-        document.body.classList.remove(
-            "modal-open"
-        );
+    if (!list.length) {
 
+        container.innerHTML =
+            emptyStateHTML(
+                "fa-circle-check",
+                "No active reminders."
+            );
 
-        editingTransactionId =
-            null;
-
-        editingFriendId =
-            null;
-
-        editingDebtId =
-            null;
-
-        editingReminderId =
-            null;
+        return;
 
     }
-);
 
 
-/* =========================================================
-   EMPTY STATE
-========================================================= */
+    container.innerHTML =
+        list.map(function (reminder) {
 
-function emptyStateHTML(
-    icon,
-    title,
-    description
-) {
+            return `
+
+                <div class="dashboard-reminder">
+
+                    <div class="reminder-dot"></div>
+
+                    <div style="flex:1;">
+
+                        <strong>
+                            ${escapeHTML(
+                                reminder.title
+                            )}
+                        </strong>
+
+                        <span>
+                            ${formatDate(
+                                reminder.date
+                            )}
+                            ${
+                                reminder.amount
+                                    ? " • " +
+                                      formatMoney(
+                                          reminder.amount
+                                      )
+                                    : ""
+                            }
+                        </span>
+
+                    </div>
+
+                    <button
+                        class="small-action"
+                        onclick="openReminderModal('${reminder.id}')">
+
+                        <i class="fa-solid fa-pen"></i>
+
+                    </button>
+
+                </div>
+
+            `;
+
+        }).join("");
+
+}
+
+
+/* ================= UTILITIES ================= */
+
+function setText(id, value) {
+
+    const element =
+        document.getElementById(id);
+
+
+    if (element) {
+        element.textContent = value;
+    }
+
+}
+
+
+function emptyStateHTML(icon, message) {
 
     return `
 
@@ -5413,14 +4486,8 @@ function emptyStateHTML(
             <i class="fa-solid ${icon}"></i>
 
             <p>
-                ${escapeHTML(title)}
+                ${escapeHTML(message)}
             </p>
-
-            <span>
-                ${escapeHTML(
-                    description
-                )}
-            </span>
 
         </div>
 
@@ -5429,193 +4496,179 @@ function emptyStateHTML(
 }
 
 
-/* =========================================================
-   TOAST MESSAGE
-========================================================= */
+function getInitials(name) {
 
-function showMessage(
-    message,
-    type = "success"
-) {
-
-    const old =
-        document.querySelector(
-            ".success-message"
-        );
+    const parts =
+        String(name || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
 
 
-    if (old) {
-        old.remove();
-    }
-
-
-    const element =
-        document.createElement(
-            "div"
-        );
-
-
-    element.className =
-        "success-message" +
-        (
-            type === "error"
-                ? " error-message"
-                : ""
-        );
-
-
-    element.innerHTML = `
-
-        <i class="fa-solid ${
-            type === "error"
-                ? "fa-circle-exclamation"
-                : "fa-circle-check"
-        }"></i>
-
-        <span>
-            ${escapeHTML(message)}
-        </span>
-
-    `;
-
-
-    document.body.appendChild(
-        element
-    );
-
-
-    setTimeout(
-        function () {
-
-            element.classList.add(
-                "hide"
-            );
-
-
-            setTimeout(
-                function () {
-
-                    element.remove();
-
-                },
-                300
-            );
-
-        },
-        2500
-    );
-
-}
-
-
-/* =========================================================
-   INITIALS
-========================================================= */
-
-function getInitials(
-    name
-) {
-
-    if (!name) {
+    if (!parts.length) {
         return "?";
     }
 
 
-    const words =
-        name
-            .trim()
-            .split(
-                /\s+/
-            );
+    if (parts.length === 1) {
 
-
-    if (
-        words.length ===
-        1
-    ) {
-
-        return words[0]
-            .substring(
-                0,
-                2
-            )
+        return parts[0]
+            .substring(0, 2)
             .toUpperCase();
 
     }
 
 
     return (
-        words[0][0] +
-        words[
-            words.length - 1
-        ][0]
+        parts[0][0] +
+        parts[parts.length - 1][0]
     ).toUpperCase();
 
 }
 
 
-/* =========================================================
-   HTML SECURITY
-========================================================= */
+function capitalize(text) {
 
-function escapeHTML(
-    value
-) {
+    if (!text) return "";
 
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return "";
-
-    }
-
-
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+    return String(text)
+        .charAt(0)
+        .toUpperCase() +
+        String(text)
+            .slice(1);
 
 }
 
 
-function escapeAttribute(
-    value
+function escapeHTML(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+function escapeAttribute(value) {
+
+    return String(value ?? "")
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
+}
+
+
+/* ================= TOAST ================= */
+
+function showMessage(
+    message,
+    type = "success"
 ) {
 
-    return escapeHTML(
-        value
-    )
-    .replace(
-        /`/g,
-        "&#096;"
+    const container =
+        document.getElementById(
+            "toastContainer"
+        );
+
+
+    const toast =
+        document.createElement("div");
+
+
+    toast.className =
+        "toast " + type;
+
+
+    toast.textContent =
+        message;
+
+
+    container.appendChild(toast);
+
+
+    setTimeout(function () {
+
+        toast.remove();
+
+    }, 3000);
+
+}
+
+
+/* ================= DATA INFO ================= */
+
+function showDataInfo() {
+
+    alert(
+        "My Money Manager\n\n" +
+        "Your data is currently stored locally in your browser using LocalStorage.\n\n" +
+        "Transactions: " + transactions.length + "\n" +
+        "Friends: " + friends.length + "\n" +
+        "Reminders: " + reminders.length + "\n\n" +
+        "If you clear browser site data, these records may be removed."
     );
 
 }
 
 
-/* =========================================================
-   CONSOLE
-========================================================= */
+/* ================= MODAL OUTSIDE CLICK ================= */
 
-console.log(
-    "My Money Manager loaded successfully."
+document.addEventListener(
+    "click",
+    function (event) {
+
+        if (
+            event.target.classList.contains(
+                "modal-overlay"
+            )
+        ) {
+
+            event.target.classList.remove(
+                "show"
+            );
+
+
+            editingTransactionId = null;
+            editingRepaymentId = null;
+            editingFriendId = null;
+            editingDebtId = null;
+            editingReminderId = null;
+
+        }
+
+    }
+);
+
+
+/* ================= ESC KEY ================= */
+
+document.addEventListener(
+    "keydown",
+    function (event) {
+
+        if (event.key !== "Escape") {
+            return;
+        }
+
+
+        document
+            .querySelectorAll(".modal-overlay.show")
+            .forEach(function (modal) {
+
+                modal.classList.remove(
+                    "show"
+                );
+
+            });
+
+
+        editingTransactionId = null;
+        editingRepaymentId = null;
+        editingFriendId = null;
+        editingDebtId = null;
+        editingReminderId = null;
+
+    }
 );
