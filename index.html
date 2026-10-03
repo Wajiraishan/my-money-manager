@@ -1,1687 +1,938 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>My Money Manager</title>
 
-    <!-- Google Font -->
-    <link rel="preconnect"
-        href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
-
-    <!-- Font Awesome -->
     <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
-    <!-- CSS -->
-    <link rel="stylesheet"
-        href="style.css">
-
+    <link rel="stylesheet" href="style.css">
 </head>
-
 
 <body>
 
+<div class="app">
 
-<!-- =====================================================
-     APP
-===================================================== -->
-
-<div class="app-container">
-
-
-    <!-- =================================================
-         SIDEBAR
-    ================================================== -->
-
+    <!-- ================= SIDEBAR ================= -->
     <aside class="sidebar">
 
-
-        <!-- LOGO -->
-
-        <div class="logo-area">
-
-            <div class="logo-icon">
-
+        <div class="brand">
+            <div class="brand-icon">
                 <i class="fa-solid fa-wallet"></i>
-
             </div>
 
             <div>
-
-                <h2>My Money</h2>
-
-                <span>Personal Manager</span>
-
+                <h2>Money Manager</h2>
+                <span>Personal Finance</span>
             </div>
-
         </div>
 
+        <nav class="sidebar-nav">
 
-        <!-- MENU -->
-
-        <nav class="menu">
-
-
-            <a href="#home"
-               class="menu-item active"
-               data-page="home">
-
+            <button class="menu-item active" data-page="home">
                 <i class="fa-solid fa-house"></i>
-
                 <span>Home</span>
+            </button>
 
-            </a>
-
-
-            <a href="#add"
-               class="menu-item"
-               data-page="add">
-
-                <i class="fa-solid fa-plus"></i>
-
+            <button class="menu-item" data-page="add">
+                <i class="fa-solid fa-circle-plus"></i>
                 <span>Add Money</span>
+            </button>
 
-            </a>
-
-
-            <a href="#expenses"
-               class="menu-item"
-               data-page="expenses">
-
+            <button class="menu-item" data-page="expenses">
                 <i class="fa-solid fa-arrow-trend-down"></i>
-
                 <span>Expenses</span>
+            </button>
 
-            </a>
-
-
-            <a href="#friends"
-               class="menu-item"
-               data-page="friends">
-
-                <i class="fa-solid fa-users"></i>
-
+            <button class="menu-item" data-page="friends">
+                <i class="fa-solid fa-user-group"></i>
                 <span>Friends</span>
+            </button>
 
-            </a>
-
-
-            <a href="#debts"
-               class="menu-item"
-               data-page="debts">
-
+            <button class="menu-item" data-page="debts">
                 <i class="fa-solid fa-credit-card"></i>
-
                 <span>Debts</span>
+            </button>
 
-            </a>
-
-
-            <a href="#reports"
-               class="menu-item"
-               data-page="reports">
-
+            <button class="menu-item" data-page="reports">
                 <i class="fa-solid fa-chart-pie"></i>
-
                 <span>Reports</span>
+            </button>
 
-            </a>
-
-
-            <a href="#reminders"
-               class="menu-item"
-               data-page="reminders">
-
+            <button class="menu-item" data-page="reminders">
                 <i class="fa-solid fa-bell"></i>
-
                 <span>Reminders</span>
-
-                <span class="notification-count"
-                      id="reminderCount">
-                    0
-                </span>
-
-            </a>
-
+                <b id="reminderCount" class="menu-count">0</b>
+            </button>
 
         </nav>
 
-
-        <!-- SIDEBAR BOTTOM -->
-
         <div class="sidebar-bottom">
 
-            <div class="profile-mini">
-
-                <div class="profile-avatar">
-
-                    W
-
-                </div>
+            <div class="profile">
+                <div class="profile-avatar">W</div>
 
                 <div>
-
                     <strong>Wajira</strong>
-
                     <small>Personal Account</small>
-
                 </div>
-
             </div>
 
-
-            <button class="settings-btn"
-                    onclick="showMessage('Settings coming soon!','success')">
-
+            <button class="settings-btn" onclick="showDataInfo()">
                 <i class="fa-solid fa-gear"></i>
-
             </button>
 
         </div>
 
-
     </aside>
 
 
+    <!-- ================= MAIN ================= -->
+    <main class="main">
 
-    <!-- =================================================
-         MAIN CONTENT
-    ================================================== -->
-
-    <main class="main-content">
-
-
-        <!-- =================================================
-             TOPBAR
-        ================================================== -->
-
+        <!-- TOP BAR -->
         <header class="topbar">
 
-
-            <div class="mobile-logo">
-
+            <div class="mobile-brand">
                 <i class="fa-solid fa-wallet"></i>
-
-                <strong>My Money</strong>
-
+                <strong>Money Manager</strong>
             </div>
-
 
             <div class="topbar-right">
 
-
-                <button class="icon-btn"
+                <button class="notification-btn"
                         onclick="goToPage('reminders')">
 
                     <i class="fa-solid fa-bell"></i>
-
                     <span id="notificationDot"></span>
 
                 </button>
 
-
-                <div class="date-display">
-
-                    <i class="fa-regular fa-calendar"></i>
-
-                    <span id="currentDate">
-                        October 02, 2026
-                    </span>
-
-                </div>
-
+                <span id="currentDate"></span>
 
             </div>
 
         </header>
 
 
+        <!-- ================= HOME ================= -->
+        <section id="page-home" class="page active-page">
 
-        <!-- =================================================
-             PAGE CONTAINER
-        ================================================== -->
+            <div class="welcome-section">
 
-        <div class="page-container">
+                <div>
+                    <p class="eyebrow">PERSONAL FINANCE</p>
+
+                    <h1>Good Morning, Wajira 👋</h1>
+
+                    <p class="muted">
+                        Keep track of your money and stay in control.
+                    </p>
+                </div>
+
+                <button class="primary-btn"
+                        onclick="openTransactionModal('income')">
+
+                    <i class="fa-solid fa-plus"></i>
+                    Add Transaction
+
+                </button>
+
+            </div>
 
 
+            <!-- BALANCE -->
+            <div class="balance-card">
 
-            <!-- =================================================
-                 HOME PAGE
-            ================================================== -->
+                <div>
+                    <span class="balance-label">Current Balance</span>
 
-            <section class="page active-page"
-                     id="homePage">
+                    <h2 id="balance">Rs. 0.00</h2>
+
+                    <small>
+                        After income, expenses, lending, borrowing,
+                        repayments and adjustments
+                    </small>
+                </div>
+
+                <button class="balance-eye"
+                        onclick="toggleBalance()">
+
+                    <i id="balanceEyeIcon"
+                       class="fa-solid fa-eye"></i>
+
+                </button>
+
+            </div>
 
 
-                <div class="dashboard">
+            <!-- STATS -->
+            <div class="stats-grid">
+
+                <div class="stat-card income-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                    </div>
+
+                    <div>
+                        <span>Total Income</span>
+                        <strong id="totalIncome">Rs. 0.00</strong>
+                    </div>
+                </div>
 
 
-                    <!-- WELCOME -->
+                <div class="stat-card expense-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-arrow-trend-down"></i>
+                    </div>
 
-                    <section class="welcome-section">
+                    <div>
+                        <span>Total Expenses</span>
+                        <strong id="totalExpenses">Rs. 0.00</strong>
+                    </div>
+                </div>
+
+
+                <div class="stat-card lent-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-hand-holding-dollar"></i>
+                    </div>
+
+                    <div>
+                        <span>People Owe You</span>
+                        <strong id="totalLent">Rs. 0.00</strong>
+                    </div>
+                </div>
+
+
+                <div class="stat-card borrowed-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                    </div>
+
+                    <div>
+                        <span>You Owe</span>
+                        <strong id="totalBorrowed">Rs. 0.00</strong>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- HOME GRID -->
+            <div class="dashboard-grid">
+
+                <!-- RECENT -->
+                <div class="panel">
+
+                    <div class="panel-header">
 
                         <div>
-
-                            <div class="small-title">
-                                PERSONAL FINANCE
-                            </div>
-
-                            <h1>
-                                Good Evening, Wajira 👋
-                            </h1>
-
-                            <p class="welcome-text">
-                                Here's your money overview for today.
-                            </p>
-
+                            <h2>Recent Transactions</h2>
+                            <p>Latest money movements</p>
                         </div>
 
-
-                        <button class="add-transaction-btn"
-                                onclick="openTransactionModal()">
-
-                            <i class="fa-solid fa-plus"></i>
-
-                            <span>Add Transaction</span>
-
+                        <button class="text-btn"
+                                onclick="goToPage('add')">
+                            View All
                         </button>
 
-                    </section>
-
-
-
-                    <!-- BALANCE -->
-
-                    <section class="balance-card">
-
-
-                        <div class="balance-left">
-
-
-                            <div class="balance-label">
-
-                                <span>Current Balance</span>
-
-                                <button class="eye-btn"
-                                        onclick="toggleBalance()">
-
-                                    <i class="fa-solid fa-eye"
-                                       id="eyeIcon"></i>
-
-                                </button>
-
-                            </div>
-
-
-                            <h2 id="balance">
-                                Rs. 0.00
-                            </h2>
-
-
-                            <p>
-                                Available money
-                            </p>
-
-
-                        </div>
-
-
-                        <div class="balance-icon">
-
-                            <i class="fa-solid fa-wallet"></i>
-
-                        </div>
-
-
-                    </section>
-
-
-
-                    <!-- STAT CARDS -->
-
-                    <section class="stats-grid">
-
-
-                        <!-- INCOME -->
-
-                        <div class="stat-card">
-
-                            <div class="stat-top">
-
-                                <div class="stat-icon income-icon">
-
-                                    <i class="fa-solid fa-arrow-down"></i>
-
-                                </div>
-
-                                <span class="stat-period">
-                                    ALL TIME
-                                </span>
-
-                            </div>
-
-                            <p>Total Income</p>
-
-                            <h3 id="totalIncome">
-                                Rs. 0.00
-                            </h3>
-
-                            <div class="stat-footer positive">
-
-                                <i class="fa-solid fa-circle-check"></i>
-
-                                Money received
-
-                            </div>
-
-                        </div>
-
-
-
-                        <!-- EXPENSE -->
-
-                        <div class="stat-card">
-
-                            <div class="stat-top">
-
-                                <div class="stat-icon expense-icon">
-
-                                    <i class="fa-solid fa-arrow-up"></i>
-
-                                </div>
-
-                                <span class="stat-period">
-                                    ALL TIME
-                                </span>
-
-                            </div>
-
-                            <p>Total Expenses</p>
-
-                            <h3 id="totalExpenses">
-                                Rs. 0.00
-                            </h3>
-
-                            <div class="stat-footer negative">
-
-                                <i class="fa-solid fa-circle-minus"></i>
-
-                                Money spent
-
-                            </div>
-
-                        </div>
-
-
-
-                        <!-- OTHERS OWE ME -->
-
-                        <div class="stat-card">
-
-                            <div class="stat-top">
-
-                                <div class="stat-icon receive-icon">
-
-                                    <i class="fa-solid fa-hand-holding-dollar"></i>
-
-                                </div>
-
-                                <span class="stat-period">
-                                    ACTIVE
-                                </span>
-
-                            </div>
-
-                            <p>Others Owe Me</p>
-
-                            <h3 id="totalLent">
-                                Rs. 0.00
-                            </h3>
-
-                            <div class="stat-footer">
-
-                                <i class="fa-solid fa-user-clock"></i>
-
-                                Money lent
-
-                            </div>
-
-                        </div>
-
-
-
-                        <!-- I OWE OTHERS -->
-
-                        <div class="stat-card">
-
-                            <div class="stat-top">
-
-                                <div class="stat-icon debt-icon">
-
-                                    <i class="fa-solid fa-money-check-dollar"></i>
-
-                                </div>
-
-                                <span class="stat-period">
-                                    ACTIVE
-                                </span>
-
-                            </div>
-
-                            <p>I Owe Others</p>
-
-                            <h3 id="totalBorrowed">
-                                Rs. 0.00
-                            </h3>
-
-                            <div class="stat-footer">
-
-                                <i class="fa-solid fa-clock"></i>
-
-                                Money borrowed
-
-                            </div>
-
-                        </div>
-
-
-                    </section>
-
-
-
-                    <!-- LOWER GRID -->
-
-                    <section class="lower-grid">
-
-
-                        <!-- RECENT TRANSACTIONS -->
-
-                        <div class="panel">
-
-
-                            <div class="panel-header">
-
-                                <div>
-
-                                    <h2>
-                                        Recent Transactions
-                                    </h2>
-
-                                    <p>
-                                        Your latest money activity
-                                    </p>
-
-                                </div>
-
-
-                                <button class="view-all"
-                                        onclick="goToPage('expenses')">
-
-                                    View All
-
-                                    <i class="fa-solid fa-arrow-right"></i>
-
-                                </button>
-
-                            </div>
-
-
-                            <div class="transaction-list"
-                                 id="recentTransactions">
-
-                            </div>
-
-
-                        </div>
-
-
-
-                        <!-- REMINDERS -->
-
-                        <div class="panel">
-
-
-                            <div class="panel-header">
-
-                                <div>
-
-                                    <h2>
-                                        Reminders
-                                    </h2>
-
-                                    <p>
-                                        Things that need your attention
-                                    </p>
-
-                                </div>
-
-
-                                <button class="notification-header"
-                                        onclick="goToPage('reminders')">
-
-                                    <i class="fa-solid fa-bell"></i>
-
-                                </button>
-
-                            </div>
-
-
-                            <div id="dashboardReminders">
-
-                            </div>
-
-
-                            <button class="add-reminder-btn"
-                                    onclick="openReminderModal()">
-
-                                <i class="fa-solid fa-plus"></i>
-
-                                Add Reminder
-
-                            </button>
-
-
-                        </div>
-
-
-                    </section>
-
-
-
-                    <!-- QUICK ACTIONS -->
-
-                    <section class="quick-actions">
-
-
-                        <div class="section-heading">
-
-                            <h2>
-                                Quick Actions
-                            </h2>
-
-                            <p>
-                                Manage your money quickly
-                            </p>
-
-                        </div>
-
-
-                        <div class="quick-grid">
-
-
-                            <button class="quick-card"
-                                    onclick="openTransactionModal()">
-
-                                <div class="quick-icon add">
-
-                                    <i class="fa-solid fa-plus"></i>
-
-                                </div>
-
-                                <div>
-
-                                    <strong>
-                                        Add Transaction
-                                    </strong>
-
-                                    <span>
-                                        Record income or expense
-                                    </span>
-
-                                </div>
-
-                                <i class="fa-solid fa-chevron-right arrow"></i>
-
-                            </button>
-
-
-
-                            <button class="quick-card"
-                                    onclick="openFriendModal()">
-
-                                <div class="quick-icon friend">
-
-                                    <i class="fa-solid fa-user-plus"></i>
-
-                                </div>
-
-                                <div>
-
-                                    <strong>
-                                        Add Friend
-                                    </strong>
-
-                                    <span>
-                                        Track money with friends
-                                    </span>
-
-                                </div>
-
-                                <i class="fa-solid fa-chevron-right arrow"></i>
-
-                            </button>
-
-
-
-                            <button class="quick-card"
-                                    onclick="openDebtModal()">
-
-                                <div class="quick-icon debt">
-
-                                    <i class="fa-solid fa-credit-card"></i>
-
-                                </div>
-
-                                <div>
-
-                                    <strong>
-                                        Add Debt
-                                    </strong>
-
-                                    <span>
-                                        Track borrowed money
-                                    </span>
-
-                                </div>
-
-                                <i class="fa-solid fa-chevron-right arrow"></i>
-
-                            </button>
-
-
-
-                            <button class="quick-card"
-                                    onclick="openReminderModal()">
-
-                                <div class="quick-icon reminder">
-
-                                    <i class="fa-solid fa-bell"></i>
-
-                                </div>
-
-                                <div>
-
-                                    <strong>
-                                        Add Reminder
-                                    </strong>
-
-                                    <span>
-                                        Never miss a payment
-                                    </span>
-
-                                </div>
-
-                                <i class="fa-solid fa-chevron-right arrow"></i>
-
-                            </button>
-
-
-                        </div>
-
-
-                    </section>
-
+                    </div>
+
+                    <div id="recentTransactions"
+                         class="transaction-list">
+                    </div>
 
                 </div>
 
 
-            </section>
+                <!-- REMINDERS -->
+                <div class="panel">
 
-
-
-            <!-- =================================================
-                 ADD MONEY PAGE
-            ================================================== -->
-
-            <section class="page"
-                     id="addPage">
-
-
-                <div class="content-page">
-
-
-                    <div class="page-title">
+                    <div class="panel-header">
 
                         <div>
-
-                            <div class="small-title">
-                                MONEY MANAGEMENT
-                            </div>
-
-                            <h1>
-                                Add Money
-                            </h1>
-
-                            <p>
-                                Record a new financial transaction.
-                            </p>
-
+                            <h2>Reminders</h2>
+                            <p>Don't forget important payments</p>
                         </div>
 
-                    </div>
-
-
-                    <div class="add-page-grid">
-
-
-                        <button class="large-action-card"
-                                onclick="openTransactionModal('income')">
-
-                            <div class="large-action-icon income-action">
-
-                                <i class="fa-solid fa-arrow-down"></i>
-
-                            </div>
-
-                            <h3>
-                                Add Income
-                            </h3>
-
-                            <p>
-                                Salary, freelance income, gifts and other money received.
-                            </p>
-
-                            <span>
-                                Add Income
-                                <i class="fa-solid fa-arrow-right"></i>
-                            </span>
-
-                        </button>
-
-
-
-                        <button class="large-action-card"
-                                onclick="openTransactionModal('expense')">
-
-                            <div class="large-action-icon expense-action">
-
-                                <i class="fa-solid fa-arrow-up"></i>
-
-                            </div>
-
-                            <h3>
-                                Add Expense
-                            </h3>
-
-                            <p>
-                                Food, fuel, shopping, bills and other spending.
-                            </p>
-
-                            <span>
-                                Add Expense
-                                <i class="fa-solid fa-arrow-right"></i>
-                            </span>
-
-                        </button>
-
-
-
-                        <button class="large-action-card"
-                                onclick="openTransactionModal('lent')">
-
-                            <div class="large-action-icon lent-action">
-
-                                <i class="fa-solid fa-hand-holding-dollar"></i>
-
-                            </div>
-
-                            <h3>
-                                Lend Money
-                            </h3>
-
-                            <p>
-                                Record money you give to a friend or another person.
-                            </p>
-
-                            <span>
-                                Lend Money
-                                <i class="fa-solid fa-arrow-right"></i>
-                            </span>
-
-                        </button>
-
-
-
-                        <button class="large-action-card"
-                                onclick="openTransactionModal('borrowed')">
-
-                            <div class="large-action-icon borrowed-action">
-
-                                <i class="fa-solid fa-money-bill-transfer"></i>
-
-                            </div>
-
-                            <h3>
-                                Borrow Money
-                            </h3>
-
-                            <p>
-                                Record money you receive from someone else.
-                            </p>
-
-                            <span>
-                                Borrow Money
-                                <i class="fa-solid fa-arrow-right"></i>
-                            </span>
-
-                        </button>
-
-
-                    </div>
-
-
-                </div>
-
-
-            </section>
-
-
-
-            <!-- =================================================
-                 EXPENSES PAGE
-            ================================================== -->
-
-            <section class="page"
-                     id="expensesPage">
-
-
-                <div class="content-page">
-
-
-                    <div class="page-title page-title-actions">
-
-                        <div>
-
-                            <div class="small-title">
-                                SPENDING
-                            </div>
-
-                            <h1>
-                                Expenses
-                            </h1>
-
-                            <p>
-                                Manage and review your spending.
-                            </p>
-
-                        </div>
-
-
-                        <button class="primary-btn"
-                                onclick="openTransactionModal('expense')">
-
-                            <i class="fa-solid fa-plus"></i>
-
-                            Add Expense
-
-                        </button>
-
-                    </div>
-
-
-
-                    <!-- EXPENSE SUMMARY -->
-
-                    <div class="expense-summary-grid">
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Total Expenses
-                            </span>
-
-                            <strong id="expensePageTotal">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                This Month
-                            </span>
-
-                            <strong id="expenseMonthTotal">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Transactions
-                            </span>
-
-                            <strong id="expenseTransactionCount">
-                                0
-                            </strong>
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- FILTERS -->
-
-                    <div class="filter-panel">
-
-
-                        <div class="search-box">
-
-                            <i class="fa-solid fa-magnifying-glass"></i>
-
-                            <input type="text"
-                                   id="expenseSearch"
-                                   placeholder="Search expenses...">
-
-                        </div>
-
-
-                        <select id="expenseCategory"
-                                class="filter-select">
-
-                            <option value="all">
-                                All Categories
-                            </option>
-
-                            <option value="food">
-                                Food
-                            </option>
-
-                            <option value="fuel">
-                                Fuel
-                            </option>
-
-                            <option value="shopping">
-                                Shopping
-                            </option>
-
-                            <option value="bills">
-                                Bills
-                            </option>
-
-                            <option value="transport">
-                                Transport
-                            </option>
-
-                            <option value="health">
-                                Health
-                            </option>
-
-                            <option value="other">
-                                Other
-                            </option>
-
-                        </select>
-
-
-                        <input type="date"
-                               id="expenseDateFilter"
-                               class="filter-select">
-
-
-                        <button class="clear-filter-btn"
-                                onclick="clearExpenseFilters()">
-
-                            <i class="fa-solid fa-xmark"></i>
-
-                            Clear
-
-                        </button>
-
-
-                    </div>
-
-
-
-                    <!-- EXPENSE LIST -->
-
-                    <div class="panel table-panel">
-
-
-                        <div class="panel-header">
-
-                            <div>
-
-                                <h2>
-                                    Expense History
-                                </h2>
-
-                                <p>
-                                    All recorded expenses
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        <div id="expenseList">
-
-                        </div>
-
-
-                    </div>
-
-
-                </div>
-
-
-            </section>
-
-
-
-            <!-- =================================================
-                 FRIENDS PAGE
-            ================================================== -->
-
-            <section class="page"
-                     id="friendsPage">
-
-
-                <div class="content-page">
-
-
-                    <div class="page-title page-title-actions">
-
-                        <div>
-
-                            <div class="small-title">
-                                PEOPLE
-                            </div>
-
-                            <h1>
-                                Friends
-                            </h1>
-
-                            <p>
-                                Track money you lend and receive from friends.
-                            </p>
-
-                        </div>
-
-
-                        <button class="primary-btn"
-                                onclick="openFriendModal()">
-
-                            <i class="fa-solid fa-user-plus"></i>
-
-                            Add Friend
-
-                        </button>
-
-                    </div>
-
-
-
-                    <!-- FRIEND SUMMARY -->
-
-                    <div class="expense-summary-grid">
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Total Owed To Me
-                            </span>
-
-                            <strong id="friendsTotalOwed">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Friends
-                            </span>
-
-                            <strong id="friendsCount">
-                                0
-                            </strong>
-
-                        </div>
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Active Accounts
-                            </span>
-
-                            <strong id="friendsActiveCount">
-                                0
-                            </strong>
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- FRIEND LIST -->
-
-                    <div class="cards-list"
-                         id="friendsList">
-
-                    </div>
-
-
-                </div>
-
-
-            </section>
-
-
-
-            <!-- =================================================
-                 DEBTS PAGE
-            ================================================== -->
-
-            <section class="page"
-                     id="debtsPage">
-
-
-                <div class="content-page">
-
-
-                    <div class="page-title page-title-actions">
-
-                        <div>
-
-                            <div class="small-title">
-                                BORROWED MONEY
-                            </div>
-
-                            <h1>
-                                Debts
-                            </h1>
-
-                            <p>
-                                Track money you owe and repayments.
-                            </p>
-
-                        </div>
-
-
-                        <button class="primary-btn"
-                                onclick="openDebtModal()">
-
-                            <i class="fa-solid fa-plus"></i>
-
-                            Add Debt
-
-                        </button>
-
-                    </div>
-
-
-
-                    <!-- DEBT SUMMARY -->
-
-                    <div class="expense-summary-grid">
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Total Debt
-                            </span>
-
-                            <strong id="debtsTotal">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Remaining
-                            </span>
-
-                            <strong id="debtsRemaining">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="summary-card">
-
-                            <span>
-                                Active Debts
-                            </span>
-
-                            <strong id="debtsActiveCount">
-                                0
-                            </strong>
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- DEBT LIST -->
-
-                    <div class="cards-list"
-                         id="debtsList">
-
-                    </div>
-
-
-                </div>
-
-
-            </section>
-
-
-
-            <!-- =================================================
-                 REPORTS PAGE
-            ================================================== -->
-
-            <section class="page"
-                     id="reportsPage">
-
-
-                <div class="content-page">
-
-
-                    <div class="page-title">
-
-                        <div>
-
-                            <div class="small-title">
-                                FINANCIAL ANALYSIS
-                            </div>
-
-                            <h1>
-                                Reports
-                            </h1>
-
-                            <p>
-                                Understand where your money goes.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- REPORT CARDS -->
-
-                    <div class="report-grid">
-
-
-                        <div class="report-card income-report">
-
-                            <div class="report-icon">
-
-                                <i class="fa-solid fa-arrow-down"></i>
-
-                            </div>
-
-                            <span>
-                                Total Income
-                            </span>
-
-                            <strong id="reportIncome">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="report-card expense-report">
-
-                            <div class="report-icon">
-
-                                <i class="fa-solid fa-arrow-up"></i>
-
-                            </div>
-
-                            <span>
-                                Total Expenses
-                            </span>
-
-                            <strong id="reportExpenses">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="report-card lent-report">
-
-                            <div class="report-icon">
-
-                                <i class="fa-solid fa-hand-holding-dollar"></i>
-
-                            </div>
-
-                            <span>
-                                Money Lent
-                            </span>
-
-                            <strong id="reportLent">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                        <div class="report-card borrowed-report">
-
-                            <div class="report-icon">
-
-                                <i class="fa-solid fa-money-bill-transfer"></i>
-
-                            </div>
-
-                            <span>
-                                Money Borrowed
-                            </span>
-
-                            <strong id="reportBorrowed">
-                                Rs. 0.00
-                            </strong>
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- MONTHLY REPORT -->
-
-                    <div class="panel report-panel">
-
-
-                        <div class="panel-header">
-
-                            <div>
-
-                                <h2>
-                                    Monthly Overview
-                                </h2>
-
-                                <p>
-                                    Your financial activity by month
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        <div id="monthlyReport">
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- SPENDING CATEGORY -->
-
-                    <div class="panel report-panel">
-
-
-                        <div class="panel-header">
-
-                            <div>
-
-                                <h2>
-                                    Spending Breakdown
-                                </h2>
-
-                                <p>
-                                    Expenses grouped by category
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        <div id="categoryReport">
-
-                        </div>
-
-
-                    </div>
-
-
-                </div>
-
-
-            </section>
-
-
-
-            <!-- =================================================
-                 REMINDERS PAGE
-            ================================================== -->
-
-            <section class="page"
-                     id="remindersPage">
-
-
-                <div class="content-page">
-
-
-                    <div class="page-title page-title-actions">
-
-                        <div>
-
-                            <div class="small-title">
-                                REMEMBER
-                            </div>
-
-                            <h1>
-                                Reminders
-                            </h1>
-
-                            <p>
-                                Keep track of important payments and collections.
-                            </p>
-
-                        </div>
-
-
-                        <button class="primary-btn"
+                        <button class="icon-btn"
                                 onclick="openReminderModal()">
 
                             <i class="fa-solid fa-plus"></i>
 
-                            Add Reminder
-
                         </button>
 
                     </div>
 
+                    <div id="dashboardReminders"
+                         class="dashboard-reminders">
+                    </div>
+
+                </div>
+
+            </div>
 
 
-                    <!-- REMINDER FILTER -->
+            <!-- QUICK ACTIONS -->
+            <div class="section-title">
 
-                    <div class="reminder-tabs">
+                <div>
+                    <h2>Quick Actions</h2>
+                    <p>Manage your money quickly</p>
+                </div>
 
-                        <button class="reminder-tab active"
-                                data-filter="all">
+            </div>
 
-                            All
 
-                        </button>
+            <div class="quick-grid">
 
-                        <button class="reminder-tab"
-                                data-filter="today">
+                <button class="quick-card"
+                        onclick="openTransactionModal('income')">
 
-                            Today
+                    <i class="fa-solid fa-arrow-down"></i>
+                    <span>Add Income</span>
 
-                        </button>
+                </button>
 
-                        <button class="reminder-tab"
-                                data-filter="upcoming">
 
-                            Upcoming
+                <button class="quick-card"
+                        onclick="openTransactionModal('expense')">
 
-                        </button>
+                    <i class="fa-solid fa-arrow-up"></i>
+                    <span>Add Expense</span>
 
-                        <button class="reminder-tab"
-                                data-filter="overdue">
+                </button>
 
-                            Overdue
 
-                        </button>
+                <button class="quick-card"
+                        onclick="openTransactionModal('lent')">
+
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                    <span>Lend Money</span>
+
+                </button>
+
+
+                <button class="quick-card"
+                        onclick="openTransactionModal('borrowed')">
+
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                    <span>Borrow Money</span>
+
+                </button>
+
+
+                <button class="quick-card"
+                        onclick="openRepaymentModal()">
+
+                    <i class="fa-solid fa-rotate"></i>
+                    <span>Repayment</span>
+
+                </button>
+
+
+                <button class="quick-card"
+                        onclick="openTransactionModal('adjustment')">
+
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Balance Adjustment</span>
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= ADD MONEY ================= -->
+        <section id="page-add" class="page">
+
+            <div class="page-heading">
+
+                <div>
+                    <p class="eyebrow">MONEY MANAGEMENT</p>
+                    <h1>Add Money</h1>
+                    <p class="muted">
+                        Record and manage all your financial transactions.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="action-grid">
+
+                <button class="large-action-card income-action"
+                        onclick="openTransactionModal('income')">
+
+                    <div class="large-action-icon">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                    </div>
+
+                    <h3>Add Income</h3>
+
+                    <p>
+                        Salary, freelance, business income and other money received.
+                    </p>
+
+                    <span>Add Income <i class="fa-solid fa-arrow-right"></i></span>
+
+                </button>
+
+
+                <button class="large-action-card expense-action"
+                        onclick="openTransactionModal('expense')">
+
+                    <div class="large-action-icon">
+                        <i class="fa-solid fa-arrow-trend-down"></i>
+                    </div>
+
+                    <h3>Add Expense</h3>
+
+                    <p>
+                        Food, fuel, shopping, bills and other expenses.
+                    </p>
+
+                    <span>Add Expense <i class="fa-solid fa-arrow-right"></i></span>
+
+                </button>
+
+
+                <button class="large-action-card lent-action"
+                        onclick="openTransactionModal('lent')">
+
+                    <div class="large-action-icon">
+                        <i class="fa-solid fa-hand-holding-dollar"></i>
+                    </div>
+
+                    <h3>Lend Money</h3>
+
+                    <p>
+                        Record money you give to friends or other people.
+                    </p>
+
+                    <span>Lend Money <i class="fa-solid fa-arrow-right"></i></span>
+
+                </button>
+
+
+                <button class="large-action-card borrowed-action"
+                        onclick="openTransactionModal('borrowed')">
+
+                    <div class="large-action-icon">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                    </div>
+
+                    <h3>Borrow Money</h3>
+
+                    <p>
+                        Record money you receive from another person.
+                    </p>
+
+                    <span>Borrow Money <i class="fa-solid fa-arrow-right"></i></span>
+
+                </button>
+
+
+                <button class="large-action-card repayment-action"
+                        onclick="openRepaymentModal()">
+
+                    <div class="large-action-icon">
+                        <i class="fa-solid fa-rotate"></i>
+                    </div>
+
+                    <h3>Repayment</h3>
+
+                    <p>
+                        Record money received back or money you paid back.
+                    </p>
+
+                    <span>Record Repayment <i class="fa-solid fa-arrow-right"></i></span>
+
+                </button>
+
+
+                <button class="large-action-card adjustment-action"
+                        onclick="openTransactionModal('adjustment')">
+
+                    <div class="large-action-icon">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+
+                    <h3>Balance Adjustment</h3>
+
+                    <p>
+                        Correct your recorded balance when it doesn't match your actual cash.
+                    </p>
+
+                    <span>Adjust Balance <i class="fa-solid fa-arrow-right"></i></span>
+
+                </button>
+
+            </div>
+
+
+            <!-- TRANSACTION HISTORY -->
+            <div class="panel history-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Transaction History</h2>
+                        <p>Edit or delete any recorded transaction.</p>
+                    </div>
+
+                    <select id="transactionHistoryFilter"
+                            class="small-select">
+
+                        <option value="all">All Transactions</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expenses</option>
+                        <option value="lent">Lent</option>
+                        <option value="borrowed">Borrowed</option>
+                        <option value="repayment">Repayments</option>
+                        <option value="adjustment">Adjustments</option>
+
+                    </select>
+
+                </div>
+
+                <div id="allTransactionList"
+                     class="transaction-list">
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= EXPENSES ================= -->
+        <section id="page-expenses" class="page">
+
+            <div class="page-heading">
+
+                <div>
+                    <p class="eyebrow">SPENDING</p>
+                    <h1>Expenses</h1>
+                    <p class="muted">
+                        See where your money is going.
+                    </p>
+                </div>
+
+                <button class="primary-btn"
+                        onclick="openTransactionModal('expense')">
+
+                    <i class="fa-solid fa-plus"></i>
+                    Add Expense
+
+                </button>
+
+            </div>
+
+
+            <div class="expense-summary-grid">
+
+                <div class="summary-card">
+                    <span>Total Expenses</span>
+                    <strong id="expensePageTotal">Rs. 0.00</strong>
+                </div>
+
+                <div class="summary-card">
+                    <span>This Month</span>
+                    <strong id="expenseMonthTotal">Rs. 0.00</strong>
+                </div>
+
+                <div class="summary-card">
+                    <span>Transactions</span>
+                    <strong id="expenseTransactionCount">0</strong>
+                </div>
+
+            </div>
+
+
+            <div class="panel">
+
+                <div class="filter-panel">
+
+                    <div class="search-box">
+                        <i class="fa-solid fa-search"></i>
+
+                        <input type="text"
+                               id="expenseSearch"
+                               placeholder="Search expenses...">
 
                     </div>
 
 
+                    <select id="expenseCategory">
 
-                    <!-- REMINDERS -->
+                        <option value="all">All Categories</option>
+                        <option value="food">Food</option>
+                        <option value="fuel">Fuel</option>
+                        <option value="shopping">Shopping</option>
+                        <option value="bills">Bills</option>
+                        <option value="transport">Transport</option>
+                        <option value="health">Health</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="other">Other</option>
 
-                    <div id="reminderList"
-                         class="reminder-page-list">
+                    </select>
 
-                    </div>
 
+                    <input type="date"
+                           id="expenseDateFilter">
+
+                    <button class="secondary-btn"
+                            onclick="clearExpenseFilters()">
+
+                        Clear
+
+                    </button>
 
                 </div>
 
 
-            </section>
+                <div id="expenseList"
+                     class="expense-list">
+                </div>
+
+            </div>
+
+        </section>
 
 
-        </div>
+        <!-- ================= FRIENDS ================= -->
+        <section id="page-friends" class="page">
 
+            <div class="page-heading">
+
+                <div>
+                    <p class="eyebrow">PEOPLE</p>
+                    <h1>Friends</h1>
+                    <p class="muted">
+                        Track money you and your friends owe each other.
+                    </p>
+                </div>
+
+                <button class="primary-btn"
+                        onclick="openFriendModal()">
+
+                    <i class="fa-solid fa-user-plus"></i>
+                    Add Friend
+
+                </button>
+
+            </div>
+
+
+            <div class="expense-summary-grid">
+
+                <div class="summary-card">
+                    <span>People Owe You</span>
+                    <strong id="friendsTotalOwed">Rs. 0.00</strong>
+                </div>
+
+                <div class="summary-card">
+                    <span>Friends</span>
+                    <strong id="friendsCount">0</strong>
+                </div>
+
+                <div class="summary-card">
+                    <span>Active Accounts</span>
+                    <strong id="friendsActiveCount">0</strong>
+                </div>
+
+            </div>
+
+
+            <div id="friendsList"
+                 class="cards-list">
+            </div>
+
+        </section>
+
+
+        <!-- ================= DEBTS ================= -->
+        <section id="page-debts" class="page">
+
+            <div class="page-heading">
+
+                <div>
+                    <p class="eyebrow">BORROWED MONEY</p>
+                    <h1>Debts</h1>
+                    <p class="muted">
+                        Keep track of money you need to pay back.
+                    </p>
+                </div>
+
+                <button class="primary-btn"
+                        onclick="openTransactionModal('borrowed')">
+
+                    <i class="fa-solid fa-plus"></i>
+                    Add Debt
+
+                </button>
+
+            </div>
+
+
+            <div class="expense-summary-grid">
+
+                <div class="summary-card">
+                    <span>Total Borrowed</span>
+                    <strong id="debtsTotal">Rs. 0.00</strong>
+                </div>
+
+                <div class="summary-card">
+                    <span>Remaining</span>
+                    <strong id="debtsRemaining">Rs. 0.00</strong>
+                </div>
+
+                <div class="summary-card">
+                    <span>Active Debts</span>
+                    <strong id="debtsActiveCount">0</strong>
+                </div>
+
+            </div>
+
+
+            <div id="debtsList"
+                 class="cards-list">
+            </div>
+
+        </section>
+
+
+        <!-- ================= REPORTS ================= -->
+        <section id="page-reports" class="page">
+
+            <div class="page-heading">
+
+                <div>
+                    <p class="eyebrow">ANALYTICS</p>
+                    <h1>Reports</h1>
+                    <p class="muted">
+                        Understand your overall money movement.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="report-grid">
+
+                <div class="report-card">
+                    <span>Income</span>
+                    <strong id="reportIncome">Rs. 0.00</strong>
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </div>
+
+                <div class="report-card">
+                    <span>Expenses</span>
+                    <strong id="reportExpenses">Rs. 0.00</strong>
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+                </div>
+
+                <div class="report-card">
+                    <span>Money Lent</span>
+                    <strong id="reportLent">Rs. 0.00</strong>
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+
+                <div class="report-card">
+                    <span>Money Borrowed</span>
+                    <strong id="reportBorrowed">Rs. 0.00</strong>
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                </div>
+
+                <div class="report-card">
+                    <span>Balance Adjustments</span>
+                    <strong id="reportAdjustments">Rs. 0.00</strong>
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+
+            </div>
+
+
+            <div class="report-layout">
+
+                <div class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <h2>Monthly Overview</h2>
+                            <p>Financial movement by month</p>
+                        </div>
+
+                    </div>
+
+                    <div id="monthlyReport"
+                         class="monthly-report">
+                    </div>
+
+                </div>
+
+
+                <div class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <h2>Expense Categories</h2>
+                            <p>Your spending categories</p>
+                        </div>
+
+                    </div>
+
+                    <div id="categoryReport"
+                         class="category-report">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= REMINDERS ================= -->
+        <section id="page-reminders" class="page">
+
+            <div class="page-heading">
+
+                <div>
+                    <p class="eyebrow">PLANNING</p>
+                    <h1>Reminders</h1>
+                    <p class="muted">
+                        Never forget an important payment.
+                    </p>
+                </div>
+
+                <button class="primary-btn"
+                        onclick="openReminderModal()">
+
+                    <i class="fa-solid fa-plus"></i>
+                    Add Reminder
+
+                </button>
+
+            </div>
+
+
+            <div class="reminder-tabs">
+
+                <button class="reminder-tab active"
+                        data-filter="all">
+                    All
+                </button>
+
+                <button class="reminder-tab"
+                        data-filter="today">
+                    Today
+                </button>
+
+                <button class="reminder-tab"
+                        data-filter="upcoming">
+                    Upcoming
+                </button>
+
+                <button class="reminder-tab"
+                        data-filter="overdue">
+                    Overdue
+                </button>
+
+            </div>
+
+
+            <div id="reminderList"
+                 class="reminder-page-list">
+            </div>
+
+        </section>
 
     </main>
-
 
 </div>
 
 
-
-<!-- =====================================================
-     MOBILE NAVIGATION
-===================================================== -->
-
+<!-- ================= MOBILE NAV ================= -->
 <nav class="mobile-nav">
 
-
-    <a href="#home"
-       class="mobile-nav-item active"
-       data-page="home">
+    <button class="mobile-nav-item active"
+            data-page="home">
 
         <i class="fa-solid fa-house"></i>
-
         <span>Home</span>
 
-    </a>
+    </button>
 
 
-    <a href="#expenses"
-       class="mobile-nav-item"
-       data-page="expenses">
+    <button class="mobile-nav-item"
+            data-page="expenses">
 
         <i class="fa-solid fa-receipt"></i>
-
         <span>Expenses</span>
 
-    </a>
+    </button>
 
 
     <button class="mobile-add"
-            onclick="openTransactionModal()">
+            onclick="openTransactionModal('income')">
 
         <i class="fa-solid fa-plus"></i>
 
     </button>
 
 
-    <a href="#friends"
-       class="mobile-nav-item"
-       data-page="friends">
+    <button class="mobile-nav-item"
+            data-page="friends">
 
-        <i class="fa-solid fa-users"></i>
-
+        <i class="fa-solid fa-user-group"></i>
         <span>Friends</span>
 
-    </a>
+    </button>
 
 
-    <a href="#reports"
-       class="mobile-nav-item"
-       data-page="reports">
+    <button class="mobile-nav-item"
+            data-page="reports">
 
         <i class="fa-solid fa-chart-pie"></i>
-
         <span>Reports</span>
 
-    </a>
-
+    </button>
 
 </nav>
 
 
+<!-- ================================================= -->
+<!-- TRANSACTION MODAL -->
+<!-- ================================================= -->
 
-<!-- =====================================================
-     TRANSACTION MODAL
-===================================================== -->
+<div id="transactionModal"
+     class="modal-overlay">
 
-<div class="modal-overlay"
-     id="transactionModal">
-
-
-    <div class="transaction-modal">
-
+    <div class="modal">
 
         <div class="modal-header">
 
             <div>
-
-                <h2>
-                    Add Transaction
-                </h2>
-
-                <p>
-                    Record your money activity
+                <span class="modal-eyebrow">TRANSACTION</span>
+                <h2 id="transactionModalTitle">Add Transaction</h2>
+                <p id="transactionModalSubtitle">
+                    Record a new money transaction.
                 </p>
-
             </div>
 
-
-            <button class="close-modal"
+            <button class="close-btn"
                     onclick="closeTransactionModal()">
 
                 <i class="fa-solid fa-xmark"></i>
@@ -1691,22 +942,16 @@
         </div>
 
 
-
         <form id="transactionForm"
               onsubmit="saveTransaction(event)">
 
-
-            <!-- TYPES -->
-
-            <div class="transaction-types">
-
+            <div class="type-selector">
 
                 <button type="button"
                         class="type-btn active"
                         data-type="income">
 
-                    <i class="fa-solid fa-arrow-down"></i>
-
+                    <i class="fa-solid fa-arrow-trend-up"></i>
                     Income
 
                 </button>
@@ -1716,8 +961,7 @@
                         class="type-btn"
                         data-type="expense">
 
-                    <i class="fa-solid fa-arrow-up"></i>
-
+                    <i class="fa-solid fa-arrow-trend-down"></i>
                     Expense
 
                 </button>
@@ -1728,7 +972,6 @@
                         data-type="lent">
 
                     <i class="fa-solid fa-hand-holding-dollar"></i>
-
                     Lent
 
                 </button>
@@ -1739,165 +982,306 @@
                         data-type="borrowed">
 
                     <i class="fa-solid fa-money-bill-transfer"></i>
-
                     Borrowed
 
                 </button>
 
 
+                <button type="button"
+                        class="type-btn"
+                        data-type="adjustment">
+
+                    <i class="fa-solid fa-sliders"></i>
+                    Adjustment
+
+                </button>
+
             </div>
 
 
+            <div class="form-group">
 
-            <!-- AMOUNT -->
+                <label>Amount</label>
 
-            <label for="transactionAmount">
-                Amount
-            </label>
+                <div class="amount-input">
+
+                    <span>Rs.</span>
+
+                    <input type="number"
+                           id="transactionAmount"
+                           min="0.01"
+                           step="0.01"
+                           placeholder="0.00"
+                           required>
+
+                </div>
+
+            </div>
 
 
-            <div class="amount-input">
+            <div id="transactionPersonGroup"
+                 class="form-group hidden">
 
-                <span>Rs.</span>
+                <label>Person</label>
 
-                <input type="number"
-                       id="transactionAmount"
-                       min="0"
-                       step="0.01"
-                       placeholder="0.00"
+                <input type="text"
+                       id="transactionPerson"
+                       placeholder="Enter person's name">
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label id="transactionDescriptionLabel">
+                    Description
+                </label>
+
+                <input type="text"
+                       id="transactionDescription"
+                       placeholder="e.g. Monthly salary"
                        required>
 
             </div>
 
 
+            <div class="form-row">
 
-            <!-- DESCRIPTION -->
+                <div class="form-group">
 
-            <label for="transactionDescription">
-                Description
-            </label>
+                    <label>Date</label>
 
+                    <input type="date"
+                           id="transactionDate"
+                           required>
 
-            <input type="text"
-                   id="transactionDescription"
-                   class="form-input"
-                   placeholder="e.g. Food, Salary, Fuel..."
-                   maxlength="100"
-                   required>
+                </div>
 
 
+                <div id="transactionCategoryGroup"
+                     class="form-group">
 
-            <!-- DATE -->
+                    <label>Category</label>
 
-            <label for="transactionDate">
-                Date
-            </label>
+                    <select id="transactionCategory">
 
+                        <option value="other">Other</option>
+                        <option value="food">Food</option>
+                        <option value="fuel">Fuel</option>
+                        <option value="shopping">Shopping</option>
+                        <option value="bills">Bills</option>
+                        <option value="transport">Transport</option>
+                        <option value="health">Health</option>
+                        <option value="entertainment">Entertainment</option>
 
-            <input type="date"
-                   id="transactionDate"
-                   class="form-input"
-                   required>
+                    </select>
 
-
-
-            <!-- CATEGORY -->
-
-            <label for="transactionCategory">
-                Category
-            </label>
-
-
-            <select id="transactionCategory"
-                    class="form-input">
-
-                <option value="other">
-                    Other
-                </option>
-
-                <option value="food">
-                    Food
-                </option>
-
-                <option value="fuel">
-                    Fuel
-                </option>
-
-                <option value="shopping">
-                    Shopping
-                </option>
-
-                <option value="bills">
-                    Bills
-                </option>
-
-                <option value="transport">
-                    Transport
-                </option>
-
-                <option value="health">
-                    Health
-                </option>
-
-                <option value="salary">
-                    Salary
-                </option>
-
-                <option value="business">
-                    Business
-                </option>
-
-            </select>
-
-
-
-            <button type="submit"
-                    class="save-btn">
-
-                <i class="fa-solid fa-check"></i>
-
-                Save Transaction
-
-            </button>
-
-
-        </form>
-
-
-    </div>
-
-
-</div>
-
-
-
-<!-- =====================================================
-     FRIEND MODAL
-===================================================== -->
-
-<div class="modal-overlay"
-     id="friendModal">
-
-
-    <div class="transaction-modal">
-
-
-        <div class="modal-header">
-
-            <div>
-
-                <h2>
-                    Add Friend
-                </h2>
-
-                <p>
-                    Add someone you lend money to
-                </p>
+                </div>
 
             </div>
 
 
-            <button class="close-modal"
+            <div id="transactionAdjustmentGroup"
+                 class="form-group hidden">
+
+                <label>Adjustment Direction</label>
+
+                <select id="adjustmentDirection">
+
+                    <option value="increase">
+                        Increase Balance
+                    </option>
+
+                    <option value="decrease">
+                        Decrease Balance
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button type="button"
+                        class="secondary-btn"
+                        onclick="closeTransactionModal()">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="primary-btn">
+
+                    <i class="fa-solid fa-check"></i>
+
+                    <span id="transactionSubmitText">
+                        Save Transaction
+                    </span>
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- REPAYMENT MODAL -->
+<!-- ================================================= -->
+
+<div id="repaymentModal"
+     class="modal-overlay">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <div>
+                <span class="modal-eyebrow">REPAYMENT</span>
+                <h2 id="repaymentModalTitle">Record Repayment</h2>
+                <p>
+                    Record money received or paid back.
+                </p>
+            </div>
+
+            <button class="close-btn"
+                    onclick="closeRepaymentModal()">
+
+                <i class="fa-solid fa-xmark"></i>
+
+            </button>
+
+        </div>
+
+
+        <form onsubmit="saveRepayment(event)">
+
+            <div class="form-group">
+
+                <label>Person</label>
+
+                <input type="text"
+                       id="repaymentPerson"
+                       placeholder="Enter person's name"
+                       required>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Repayment Type</label>
+
+                <select id="repaymentDirection">
+
+                    <option value="received">
+                        I Received Money From Them
+                    </option>
+
+                    <option value="paid">
+                        I Paid Money To Them
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Amount</label>
+
+                <div class="amount-input">
+
+                    <span>Rs.</span>
+
+                    <input type="number"
+                           id="repaymentAmount"
+                           min="0.01"
+                           step="0.01"
+                           placeholder="0.00"
+                           required>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label>Date</label>
+
+                    <input type="date"
+                           id="repaymentDate"
+                           required>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>Note</label>
+
+                    <input type="text"
+                           id="repaymentNote"
+                           placeholder="Optional note">
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button type="button"
+                        class="secondary-btn"
+                        onclick="closeRepaymentModal()">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="primary-btn">
+
+                    <i class="fa-solid fa-check"></i>
+
+                    <span id="repaymentSubmitText">
+                        Save Repayment
+                    </span>
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- FRIEND MODAL -->
+<!-- ================================================= -->
+
+<div id="friendModal"
+     class="modal-overlay">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <div>
+                <span class="modal-eyebrow">CONTACT</span>
+                <h2 id="friendModalTitle">Add Friend</h2>
+                <p>Save a person for easier money tracking.</p>
+            </div>
+
+            <button class="close-btn"
                     onclick="closeFriendModal()">
 
                 <i class="fa-solid fa-xmark"></i>
@@ -1907,96 +1291,82 @@
         </div>
 
 
+        <form onsubmit="saveFriend(event)">
 
-        <form id="friendForm"
-              onsubmit="saveFriend(event)">
+            <div class="form-group">
 
+                <label>Name</label>
 
-            <label for="friendName">
-                Friend Name
-            </label>
-
-
-            <input type="text"
-                   id="friendName"
-                   class="form-input"
-                   placeholder="e.g. Kasun"
-                   maxlength="60"
-                   required>
-
-
-
-            <label for="friendPhone">
-                Phone Number
-            </label>
-
-
-            <input type="tel"
-                   id="friendPhone"
-                   class="form-input"
-                   placeholder="07XXXXXXXX">
-
-
-
-            <label for="friendNote">
-                Note
-            </label>
-
-
-            <input type="text"
-                   id="friendNote"
-                   class="form-input"
-                   placeholder="Optional note">
-
-
-
-            <button type="submit"
-                    class="save-btn">
-
-                <i class="fa-solid fa-user-plus"></i>
-
-                Save Friend
-
-            </button>
-
-
-        </form>
-
-
-    </div>
-
-
-</div>
-
-
-
-<!-- =====================================================
-     DEBT MODAL
-===================================================== -->
-
-<div class="modal-overlay"
-     id="debtModal">
-
-
-    <div class="transaction-modal">
-
-
-        <div class="modal-header">
-
-            <div>
-
-                <h2>
-                    Add Debt
-                </h2>
-
-                <p>
-                    Record money you borrowed
-                </p>
+                <input type="text"
+                       id="friendName"
+                       placeholder="Friend's name"
+                       required>
 
             </div>
 
 
-            <button class="close-modal"
+            <div class="form-group">
+
+                <label>Phone</label>
+
+                <input type="tel"
+                       id="friendPhone"
+                       placeholder="Optional phone number">
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Note</label>
+
+                <textarea id="friendNote"
+                          rows="3"
+                          placeholder="Optional note"></textarea>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button type="button"
+                        class="secondary-btn"
+                        onclick="closeFriendModal()">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="primary-btn">
+                    Save Friend
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- DEBT MODAL -->
+<!-- ================================================= -->
+
+<div id="debtModal"
+     class="modal-overlay">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <div>
+                <span class="modal-eyebrow">DEBT</span>
+                <h2 id="debtModalTitle">Add Debt</h2>
+                <p>Record money borrowed from someone.</p>
+            </div>
+
+            <button class="close-btn"
                     onclick="closeDebtModal()">
 
                 <i class="fa-solid fa-xmark"></i>
@@ -2006,126 +1376,118 @@
         </div>
 
 
+        <form onsubmit="saveDebt(event)">
 
-        <form id="debtForm"
-              onsubmit="saveDebt(event)">
+            <div class="form-group">
 
+                <label>Person</label>
 
-            <label for="debtPerson">
-                Person / Organization
-            </label>
-
-
-            <input type="text"
-                   id="debtPerson"
-                   class="form-input"
-                   placeholder="e.g. Amal"
-                   required>
-
-
-
-            <label for="debtAmount">
-                Amount
-            </label>
-
-
-            <div class="amount-input">
-
-                <span>Rs.</span>
-
-                <input type="number"
-                       id="debtAmount"
-                       min="0"
-                       step="0.01"
-                       placeholder="0.00"
+                <input type="text"
+                       id="debtPerson"
+                       placeholder="Who do you owe?"
                        required>
 
             </div>
 
 
+            <div class="form-group">
 
-            <label for="debtDate">
-                Borrowed Date
-            </label>
+                <label>Amount</label>
 
+                <div class="amount-input">
 
-            <input type="date"
-                   id="debtDate"
-                   class="form-input"
-                   required>
+                    <span>Rs.</span>
 
+                    <input type="number"
+                           id="debtAmount"
+                           min="0.01"
+                           step="0.01"
+                           required>
 
-
-            <label for="debtDueDate">
-                Due Date
-            </label>
-
-
-            <input type="date"
-                   id="debtDueDate"
-                   class="form-input">
-
-
-
-            <label for="debtNote">
-                Note
-            </label>
-
-
-            <input type="text"
-                   id="debtNote"
-                   class="form-input"
-                   placeholder="Optional note">
-
-
-
-            <button type="submit"
-                    class="save-btn">
-
-                <i class="fa-solid fa-credit-card"></i>
-
-                Save Debt
-
-            </button>
-
-
-        </form>
-
-
-    </div>
-
-
-</div>
-
-
-
-<!-- =====================================================
-     REMINDER MODAL
-===================================================== -->
-
-<div class="modal-overlay"
-     id="reminderModal">
-
-
-    <div class="transaction-modal">
-
-
-        <div class="modal-header">
-
-            <div>
-
-                <h2>
-                    Add Reminder
-                </h2>
-
-                <p>
-                    Never forget an important payment
-                </p>
+                </div>
 
             </div>
 
 
-            <button class="close-modal"
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label>Borrowed Date</label>
+
+                    <input type="date"
+                           id="debtDate"
+                           required>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>Due Date</label>
+
+                    <input type="date"
+                           id="debtDueDate">
+
+                </div>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Note</label>
+
+                <textarea id="debtNote"
+                          rows="3"
+                          placeholder="Optional note"></textarea>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button type="button"
+                        class="secondary-btn"
+                        onclick="closeDebtModal()">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="primary-btn">
+
+                    <i class="fa-solid fa-check"></i>
+                    Save Debt
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- REMINDER MODAL -->
+<!-- ================================================= -->
+
+<div id="reminderModal"
+     class="modal-overlay">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <div>
+                <span class="modal-eyebrow">REMINDER</span>
+                <h2 id="reminderModalTitle">Add Reminder</h2>
+                <p>Set a reminder for an important payment.</p>
+            </div>
+
+            <button class="close-btn"
                     onclick="closeReminderModal()">
 
                 <i class="fa-solid fa-xmark"></i>
@@ -2135,95 +1497,95 @@
         </div>
 
 
+        <form onsubmit="saveReminder(event)">
 
-        <form id="reminderForm"
-              onsubmit="saveReminder(event)">
+            <div class="form-group">
 
+                <label>Title</label>
 
-            <label for="reminderTitle">
-                Reminder
-            </label>
-
-
-            <input type="text"
-                   id="reminderTitle"
-                   class="form-input"
-                   placeholder="e.g. Pay Amal"
-                   maxlength="100"
-                   required>
-
-
-
-            <label for="reminderAmount">
-                Amount
-            </label>
-
-
-            <div class="amount-input">
-
-                <span>Rs.</span>
-
-                <input type="number"
-                       id="reminderAmount"
-                       min="0"
-                       step="0.01"
-                       placeholder="Optional">
+                <input type="text"
+                       id="reminderTitle"
+                       placeholder="e.g. Pay phone bill"
+                       required>
 
             </div>
 
 
+            <div class="form-group">
 
-            <label for="reminderDate">
-                Due Date
-            </label>
+                <label>Amount</label>
 
+                <div class="amount-input">
 
-            <input type="date"
-                   id="reminderDate"
-                   class="form-input"
-                   required>
+                    <span>Rs.</span>
 
+                    <input type="number"
+                           id="reminderAmount"
+                           min="0"
+                           step="0.01"
+                           placeholder="Optional">
 
+                </div>
 
-            <label for="reminderNote">
-                Note
-            </label>
-
-
-            <input type="text"
-                   id="reminderNote"
-                   class="form-input"
-                   placeholder="Optional note">
+            </div>
 
 
+            <div class="form-group">
 
-            <button type="submit"
-                    class="save-btn">
+                <label>Date</label>
 
-                <i class="fa-solid fa-bell"></i>
+                <input type="date"
+                       id="reminderDate"
+                       required>
 
-                Save Reminder
+            </div>
 
-            </button>
 
+            <div class="form-group">
+
+                <label>Note</label>
+
+                <textarea id="reminderNote"
+                          rows="3"
+                          placeholder="Optional note"></textarea>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button type="button"
+                        class="secondary-btn"
+                        onclick="closeReminderModal()">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="primary-btn">
+
+                    <i class="fa-solid fa-check"></i>
+
+                    <span id="reminderSubmitText">
+                        Save Reminder
+                    </span>
+
+                </button>
+
+            </div>
 
         </form>
 
-
     </div>
-
 
 </div>
 
 
+<div id="toastContainer"
+     class="toast-container">
+</div>
 
-<!-- =====================================================
-     JAVASCRIPT
-===================================================== -->
 
 <script src="script.js"></script>
 
-
 </body>
-
 </html>
